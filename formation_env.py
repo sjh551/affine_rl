@@ -91,7 +91,7 @@ class FormationGymEnv(gym.Env):
         info = {}
         
         # 成功：到达目标附近
-        if dist_to_goal < 0.3:
+        if dist_to_goal < 0.2:
             reward += 100.0  # 给个大鸡腿
             done = True
             info['result'] = 'success'
