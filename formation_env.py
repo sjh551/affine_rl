@@ -1,4 +1,4 @@
-# 文件名: formation_env.py
+# 没有使用 PyBullet，而是使用 gym 环境
 import gym
 import numpy as np
 from gym import spaces
@@ -131,6 +131,6 @@ class FormationGymEnv(gym.Env):
         for other in self.robots[1:]:
             d = np.linalg.norm(me.pos - other.pos)
             if d < safe_margin:
-                r_coll -= 0.2 / (d - 2*ROBOT_RADIUS + 0.01) # 惩罚项
+                r_coll -= 1 / (d - 2*ROBOT_RADIUS + 0.01) # 惩罚项
                 
         return r_goal + r_coll

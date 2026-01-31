@@ -2,25 +2,24 @@ import os
 import time
 from stable_baselines3 import PPO
 from formation_env import FormationGymEnv
+from pybullet_env import FormationPyBulletEnv
+from leader_env import SingleRobotPyBulletEnv
 
-# 1. 创建环境
-env = FormationGymEnv()
 
-# 2. 定义模型 (PPO)
-# policy="MlpPolicy" 表示使用全连接神经网络 (因为输入是坐标数值，不是图片)
-model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_formation_tensorboard/")
+# 阶段一：无障碍物训练 (让它学会怎么走到绿球),训练完一次就不管了
+# print(">>> 阶段 1: 训练基础导航 (无障碍)...")
+# env_simple = SingleRobotPyBulletEnv(render_mode=False, enable_obstacles=False) 
+# model = PPO("MlpPolicy", env_simple, verbose=1, learning_rate=3e-4) # 学习率很重要
+# model.learn(total_timesteps=100000)
+# model.save("ppo_stage1_nav")
+# env_simple.close()
 
-print("开始训练 Leader... (按 Ctrl+C 可以随时停止)")
-
-# 3. 开始训练
-# total_timesteps=50000 
-# 论文里用了 200,000 steps，先跑 50,000看效果
-try:
-    model.learn(total_timesteps=50000)
-    print("训练完成！")
-except KeyboardInterrupt:
-    print("训练被手动中断，正在保存模型...")
-
-# 4. 保存模型
-model.save("ppo_leader_model")
-print("模型已保存为 ppo_leader_model.zip")
+# 阶段二：有障碍物训练 (加载刚才学会走路的脑子，继续学避障)
+print(">>> 阶段 2: 训练避障能力 (加载阶段1模型)...")
+env_hard = SingleRobotPyBulletEnv(render_mode=False, enable_obstacles=True)
+# 加载模型
+model = PPO.load("ppo_stage1_nav", env=env_hard, verbose=1)
+# 继续训练 20万步
+model.learn(total_timesteps=100000)
+model.save("ppo_final_leader")
+print("训练全部完成！")
