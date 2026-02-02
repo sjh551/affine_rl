@@ -8,10 +8,10 @@ from leader_env import SingleRobotPyBulletEnv
 
 # 1. 加载环境和模型
 # 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出
-env = SingleRobotPyBulletEnv(render_mode=True, enable_obstacles=True)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
 # 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
 try:
-    model = PPO.load("ppo_final_leader", env=env)
+    model = PPO.load("ppo2_final_leader", env=env)
     print("✅ 成功加载 RL 模型！")
     use_rl = True
 except:
@@ -66,7 +66,7 @@ plt.scatter(env.target_pos[0], env.target_pos[1], c='red', marker='*', s=300, la
 colors = ['r', 'b', 'g']
 labels = ['Leader (RL)', 'Follower 1 (PID)', 'Follower 2 (PID)']
 
-for i in range(1):
+for i in range(2):
     # 画线
     plt.plot(all_trajectories[i][0], all_trajectories[i][1], color=colors[i], label=labels[i], linewidth=2)
     # 画起点 (空心圈)
