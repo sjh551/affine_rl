@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pybullet as p  # 必须导入 pybullet 才能获取位置
+import torch
 from stable_baselines3 import PPO
 from pybullet_env import FormationPyBulletEnv 
 from leader_env import SingleRobotPyBulletEnv
@@ -11,8 +12,26 @@ from leader_env import SingleRobotPyBulletEnv
 env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
 # 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
 try:
+    # model = PPO.load("ppo2_stage1_nav", env=env)
     model = PPO.load("ppo2_final_leader", env=env)
     print("✅ 成功加载 RL 模型！")
+    # 打印 CUDA 状态和模型所在设备
+    try:
+        print('torch.cuda.is_available():', torch.cuda.is_available())
+    except Exception as e:
+        print('无法检测 CUDA 可用性:', e)
+    try:
+        print('model.device:', model.device)
+    except Exception as e:
+        print('model.device 属性不可用:', e)
+    # 统计模型参数量（policy 层）
+    try:
+        total_params = sum(p.numel() for p in model.policy.parameters())
+        trainable_params = sum(p.numel() for p in model.policy.parameters() if p.requires_grad)
+        print(f'Policy class: {type(model.policy).__name__}')
+        print(f'Total params: {total_params:,}, Trainable params: {trainable_params:,}')
+    except Exception as e:
+        print('无法统计模型参数:', e)
     use_rl = True
 except:
     print("⚠️ 未找到模型文件，将使用随机动作进行测试...")
@@ -66,7 +85,7 @@ plt.scatter(env.target_pos[0], env.target_pos[1], c='red', marker='*', s=300, la
 colors = ['r', 'b', 'g']
 labels = ['Leader (RL)', 'Follower 1 (PID)', 'Follower 2 (PID)']
 
-for i in range(2):
+for i in range(3):
     # 画线
     plt.plot(all_trajectories[i][0], all_trajectories[i][1], color=colors[i], label=labels[i], linewidth=2)
     # 画起点 (空心圈)
