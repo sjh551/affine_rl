@@ -5,7 +5,6 @@ import pybullet as p  # 必须导入 pybullet 才能获取位置
 import torch
 from stable_baselines3 import PPO
 from pybullet_env import FormationPyBulletEnv 
-from leader_env import SingleRobotPyBulletEnv
 
 # 1. 加载环境和模型
 # 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出

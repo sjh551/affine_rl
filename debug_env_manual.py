@@ -4,7 +4,7 @@ import numpy as np
 from pybullet_env import FormationPyBulletEnv
 
 # 初始化环境
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
 env.reset()
 
 print("================================================")

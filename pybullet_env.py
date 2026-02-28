@@ -37,15 +37,18 @@ class FormationPyBulletEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
         
         self.n_nearest_obs = 5 # 最近的5个障碍物
-        # --- 观测空间 (26维) ---
-        # 1. 编队中心相对目标的向量 (2)
-        # 2. A 速度 (2)
-        # 3. AB之间的距离(2) + B 速度 (2)
-        # 4. 最近的5个障碍物相对编队中心的位置 (5*2=10)
+        # --- 观测空间 (38维) ---
+        # 1. 目标相对向量 (2)
+        # 2. A速度(2) + B速度(2)
+        # 3. AB相对位置(2)
+        # 4. A的最近5个障碍物 (5 * 2 = 10)
+        # 5. B的最近5个障碍物 (5 * 2 = 10)
+        # 6. C的最近5个障碍物 (5 * 2 = 10)
+        # 2 + 4 + 2 + 10 + 10 + 10 = 38 维
         self.n_lidar_rays = 9
         self.lidar_range = 3.0
 
-        obs_dim = 2 + 2 + 2 + 2 + (self.n_nearest_obs * 2)
+        obs_dim = 2 + 4 + 2 + (self.n_nearest_obs * 2 * 3)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
         
         self.target_pos = np.array([8.5, 0, 0])
@@ -157,21 +160,36 @@ class FormationPyBulletEnv(gym.Env):
 
     def step(self, action):
         self.current_step += 1
-        
-        # --- [关键修改] 动作平滑处理 ---
-        # 混合系数 alpha: 0.2 表示 20% 新动作，80% 旧动作 (惯性很大，轨迹会非常平滑)
-        # 训练初期可以设大一点(0.5)，后期为了丝滑可以设小。建议 0.3 ~ 0.5
-        alpha = 0.4 
-        smooth_action = alpha * action + (1 - alpha) * self.last_action
-        
-        # 解析平滑后的动作
-        vel_A = np.array([smooth_action[0], smooth_action[1], 0]) * 1.5 
-        vel_B = np.array([smooth_action[2], smooth_action[3], 0]) * 1.5
 
-        # 更新 last_action (注意：要更新为 smooth_action 还是 raw action? 
-        # 通常更新为 raw action 记录用于计算 diff 惩罚，但为了物理平滑，这里我们控制的是电机)
-        # 为了计算 reward 里的 action_diff，我们还是保留原始 action 的记录
-        # 但物理上执行 smooth_action
+        # --- 1. 获取动作的坐标系朝向 ---
+        center_pos = self._get_center_pos()
+        vec_to_goal = self.target_pos[:2] - center_pos[:2]
+        angle_to_goal = np.arctan2(vec_to_goal[1], vec_to_goal[0])
+        
+        # 构建逆旋转矩阵 (Body -> World) 
+        # 注意！这里是正的 angle_to_goal，和 obs 里的负号正好相反
+        c, s = np.cos(angle_to_goal), np.sin(angle_to_goal)
+        R_action = np.array([[c, -s], [s, c]])
+        
+        # --- 2. 解析网络输出的体坐标系动作 ---
+        action_A_body = np.array([action[0], action[1]]) * 1.5
+        action_B_body = np.array([action[2], action[3]]) * 1.5
+        
+        # --- 3. [关键修复] 转换到世界坐标系 ---
+        vel_A_world = R_action @ action_A_body
+        vel_B_world = R_action @ action_B_body
+
+        # 拼上 Z 轴速度 (0.0)
+        target_vel_A = np.array([vel_A_world[0], vel_A_world[1], 0.0])
+        target_vel_B = np.array([vel_B_world[0], vel_B_world[1], 0.0])
+        
+        # 假设最大允许的单步速度变化量 (相当于最大加速度 * dt)
+        max_delta_v = 0.5
+        
+        # 限制加速度：当前速度不能突变，只能在上一帧速度的基础上增减 max_delta_v
+        vel_A = np.clip(target_vel_A, self.last_vels[0] - max_delta_v, self.last_vels[0] + max_delta_v)
+        vel_B = np.clip(target_vel_B, self.last_vels[1] - max_delta_v, self.last_vels[1] + max_delta_v)
+
         
         p.resetBaseVelocity(self.robot_ids[0], linearVelocity=vel_A)
         p.resetBaseVelocity(self.robot_ids[1], linearVelocity=vel_B)
@@ -205,12 +223,6 @@ class FormationPyBulletEnv(gym.Env):
 
         return obs, reward, done, {}
     
-    def _get_center_pos(self):
-        """计算双车中心点"""
-        pos_A, _ = p.getBasePositionAndOrientation(self.robot_ids[0])
-        pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
-        center = (np.array(pos_A) + np.array(pos_B)) / 2.0
-        return center
     
     # ============================================================
     #   [核心接口] Follower 控制算法
@@ -253,18 +265,287 @@ class FormationPyBulletEnv(gym.Env):
             
         return control_vel
     
-    def _get_all_robot_states(self):
-        """辅助函数：获取所有机器人的位置和速度，供 Follower 算法使用"""
-        states = {}
-        for i, rid in enumerate(self.robot_ids):
+    def _get_obs(self):
+        # --- 1. 获取原始世界坐标系数据 ---
+        pos_A, _ = p.getBasePositionAndOrientation(self.robot_ids[0])
+        vel_A, _ = p.getBaseVelocity(self.robot_ids[0])
+        pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
+        vel_B, _ = p.getBaseVelocity(self.robot_ids[1])
+        # states of followers 
+        pos_C, _ = p.getBasePositionAndOrientation(self.robot_ids[2])
+        vel_C, _ = p.getBaseVelocity(self.robot_ids[2])
+        
+        # 转换为 numpy 数组 (只取 x, y)
+        pA = np.array(pos_A[:2])
+        vA = np.array(vel_A[:2])
+        pB = np.array(pos_B[:2])
+        vB = np.array(vel_B[:2])
+        pC = np.array(pos_C[:2])  # 提取 Follower 的 2D 坐标
+
+        # the centroid of the whole formation
+        center_pos = self._get_center_pos()[:2] # 只取 x, y
+        
+        # --- 2. 构建旋转矩阵 (World -> Body/Target Frame) ---
+        # 以"指向目标的方向"作为 Body Frame 的 X 轴
+        vec_to_goal = self.target_pos[:2] - center_pos
+        angle_to_goal = np.arctan2(vec_to_goal[1], vec_to_goal[0])
+        
+        # 旋转矩阵
+        c, s = np.cos(-angle_to_goal), np.sin(-angle_to_goal)
+        R = np.array([[c, -s], [s, c]])
+        
+        # --- 3. [关键修改] 统一坐标变换 ---
+        
+        # A. 目标向量 (转到 Body Frame)
+        rel_goal_world = self.target_pos[:2] - center_pos
+        rel_goal_body = R @ rel_goal_world # 结果通常是 [dist, 0]
+        
+        # B. 速度向量 (也必须转！否则网络不知道是侧身走还是直走)
+        vA_body = R @ vA
+        vB_body = R @ vB
+        
+        # C. 队友相对位置 (也必须转！否则旋转后队友位置就乱了)
+        rel_AB_world = pB - pA
+        rel_AB_body = R @ rel_AB_world
+        
+        # --- 4. [核心重构] 分别计算障碍物相对于 A, B, C 的位置 ---
+        # 为了避免写三次重复代码，定义一个局部辅助函数
+        def get_agent_obs_features(agent_pos):
+            obs_rel_list = []
+            if self.enable_obstacles:
+                for obs_id in self.obstacles:
+                    o_pos, _ = p.getBasePositionAndOrientation(obs_id)
+                    # 计算障碍物相对于当前智能体的世界坐标
+                    rel_o_world = np.array(o_pos[:2]) - agent_pos
+                    # 转到编队的统一 Body Frame
+                    rel_o_body = R @ rel_o_world
+                    dist = np.linalg.norm(rel_o_world)
+                    
+                    # 过滤掉身后的障碍物 (x < -2.0)
+                    if rel_o_body[0] > -2.0: 
+                        obs_rel_list.append((dist, rel_o_body[0], rel_o_body[1]))
+            
+            # 按距离排序
+            obs_rel_list.sort(key=lambda x: x[0])
+            
+            features = []
+            for i in range(self.n_nearest_obs):
+                if i < len(obs_rel_list):
+                    features.extend([
+                        obs_rel_list[i][1] / self.wall_length, 
+                        obs_rel_list[i][2] / self.wall_width
+                    ])
+                else:
+                    # 视野内无障碍物时，填远处安全默认值
+                    features.extend([1.0, 1.0])
+            return features
+
+        # 分别获取 A, B, C 身边的障碍物特征
+        obs_features_A = get_agent_obs_features(pA)
+        obs_features_B = get_agent_obs_features(pB)
+        obs_features_C = get_agent_obs_features(pC)
+
+        # --- 5. 组装最终的 Observation ---
+        obs = [
+            # 目标 (2维)
+            rel_goal_body[0] / self.wall_length, 
+            rel_goal_body[1] / self.wall_width, 
+            
+            # 速度 (4维)
+            vA_body[0], vA_body[1],
+            vB_body[0], vB_body[1],
+            
+            # Leader 相对位置 (2维)
+            rel_AB_body[0] / self.wall_length, 
+            rel_AB_body[1] / self.wall_width
+        ]
+        
+        # 拼接三个智能体的障碍物信息
+        obs.extend(obs_features_A)
+        obs.extend(obs_features_B)
+        obs.extend(obs_features_C)
+
+        return np.array(obs, dtype=np.float32)
+    
+    def _compute_reward(self, center_pos, action):
+        reward = 0
+        done = False
+        reason = ""
+        
+        # --- 1. 进度奖励 ---
+        dist_to_goal = np.linalg.norm(center_pos[:2] - self.target_pos[:2])
+        if not hasattr(self, 'last_center_dist'): self.last_center_dist = dist_to_goal
+        
+        
+        reward += (self.last_center_dist - dist_to_goal) * 50.0 
+        self.last_center_dist = dist_to_goal
+
+        # --- 2. 动作平滑惩罚 (Action Smoothness) ---
+        # 惩罚动作的突变：||a_t - a_{t-1}||
+        # 这对 Follower 能够跟上至关重要！
+        # action_diff = np.linalg.norm(action - self.last_action)
+        # reward -= action_diff * 0.05  # 系数根据训练情况调，0.5 是经验值
+
+        # self.last_action = action.copy() # 更新记录
+
+        # --- 3. 奇异性避免 (Singularity Avoidance) ---
+        # 防止两个 Leader 靠得太近 (距离 < 0.3) 或太远 (距离 > 5.0)
+        pos_A, _ = p.getBasePositionAndOrientation(self.robot_ids[0])
+        pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
+
+        pA_2d = np.array(pos_A[:2])
+        pB_2d = np.array(pos_B[:2])
+        
+        # 实际的相对向量
+        actual_vec = pB_2d - pA_2d
+
+        # A. 奇异性避免 (靠得太近极度危险)
+        dist_AB = np.linalg.norm(actual_vec)
+        if dist_AB < 0.8: 
+            reward -= 10.0 # 危险！接近穿模
+            
+        # 极端通信断连惩罚
+        if dist_AB > 5.0:
+            reward -= (dist_AB - 5.0) * 1.0
+
+        # B. 向量误差约束 (Vector Error Constraint)
+        # 获取标称构型下的期望向量 (假设 g_nom 里存的是世界坐标系下的偏移)
+        # desired_vec 就是 Leader B 应该在 Leader A 的什么相对位置
+        if dist_to_goal < 2.5: # 只有在接近目标时才严格要求队形，否则允许更大误差
+            desired_vec = np.array(self.g_nom[1][:2]) - np.array(self.g_nom[0][:2])
+            # 计算向量差异 (同时约束了距离放缩和过度旋转)
+            vec_error = np.linalg.norm(actual_vec - desired_vec)
+            
+            # 柔性约束：允许一定程度的变形避障 (比如误差在 0.5 米以内不怎么罚)
+            if vec_error > 0.5:
+                # 误差越大，惩罚越重。乘 2.0 是一个经验系数
+                reward -= (vec_error - 0.5) * 10.0 
+
+
+        # 轻微的时间惩罚，鼓励快点到达
+        reward -= 0.05 # 时间消耗
+        
+        # --- 4. 全局避障 (Leader要对Follower负责) ---
+        # 任何一个机器人(包括Follower)撞了，都算Leader的责任
+        
+        # A. 撞墙检测
+        limit_x = self.wall_length - 0.5 - 0.3  # wall_thicknes is 0.5m + robot_radius is 0.2m 留出0.3来
+        limit_y = self.wall_width - 0.5 - 0.3
+        for rid in self.robot_ids:
             pos, _ = p.getBasePositionAndOrientation(rid)
-            vel, _ = p.getBaseVelocity(rid)
-            states[i] = {'pos': np.array(pos), 'vel': np.array(vel)}
-        return states
+            if abs(pos[0]) > limit_x or abs(pos[1]) > limit_y:
+                reward -= 50
+                done = True
+                reason = "Wall_Out"
+                break
+             
+        # B. 撞障碍物检测 & 互撞检测
+        if not done:
+            # 获取所有位置
+            all_pos = []
+            for rid in self.robot_ids:
+                p_val, _ = p.getBasePositionAndOrientation(rid)
+                all_pos.append(np.array(p_val[:2]))
+            
+            # 1. 检测互撞 (Leader-Leader, Leader-Follower)
+            # 简单的两两比对
+            import itertools
+            for p1, p2 in itertools.combinations(all_pos, 2):
+                if np.linalg.norm(p1 - p2) < 0.5:
+                    reward -= 50 # 发生互撞
+                    done = True
+                    reason = "Crash_Team"
+                    break
+            
+            # 2. 检测障碍物
+            if self.enable_obstacles and not done:
+                for i, r_pos in enumerate(all_pos):
+                    for obs_id in self.obstacles:
+                        o_pos, _ = p.getBasePositionAndOrientation(obs_id)
+                        d = np.linalg.norm(np.array(o_pos[:2]) - r_pos)
+                        if d < 1.0: # 势场
+                            reward -= (1.0 - d) * 0.5
+                        if d < 0.6: # 碰撞
+                            reward -= 50
+                            done = True
+                            reason = f"Crash_Obstacle (Bot {i})"
+                            break
+                    if done: break
+
+        # --- 5. 成功与超时 ---
+        if not done and dist_to_goal < 1.0:
+            reward += 200
+            done = True
+            reason = "Success"
+        elif self.current_step >= self.max_steps:
+            done = True
+            reason = "Timeout"
+
+    
+        # if done: print(f"Episode End: {reason}")
+        # if done and reason == "Success":
+        #     print(f"Episode End: {reason}")
+        
+        return reward, {'done': done}
+    
+    def _draw_formation_lines(self):
+        # 画出三角形连接线：A-B, B-F, F-A
+        points = []
+        for rid in self.robot_ids:
+            pos, _ = p.getBasePositionAndOrientation(rid)
+            points.append(pos)
+        
+        # 线条颜色 [R, G, B]
+        line_color = [1, 1, 0] # 黄色
+        
+        # 移除上一帧的线 (如果不移除，画面会变卡且全是线)
+        # 注意：p.removeAllUserDebugItems() 会移除所有 debug 物体。
+        # 如果你想保留其他 debug 物体，应该保存 line_id 并用 removeUserDebugItem
+        # 这里为了简单，我们用 addUserDebugLine 的 replaceItemArgument (需要维护ID)
+        # 或者简单的 removeAll (会把 target sphere 的字也清掉，但不影响 sphere 本身)
+        
+        # 更好的方法：只在第一次创建，后面使用 replace
+        # 这里使用 lifetime 方案，让它自动消失
+        p.addUserDebugLine(points[0], points[1], line_color, lineWidth=2, lifeTime=0.1) # A-B
+        p.addUserDebugLine(points[1], points[2], line_color, lineWidth=2, lifeTime=0.1) # B-F
+        p.addUserDebugLine(points[2], points[0], line_color, lineWidth=2, lifeTime=0.1) # F-A
+
+    def _create_walls(self):
+        """创建四周的围墙"""
+        self.wall_ids = []
+        wall_thickness = 0.5
+        wall_height = 1.0
+        wall_length = self.wall_length   # 围墙长
+        wall_width = self.wall_width    # 围墙宽
+        
+        # 墙的参数: (中心位置, 长宽高)
+        walls_config = [
+            ([wall_length, 0, 0.5], [wall_thickness, wall_width, wall_height]),  # 右墙
+            ([-wall_length, 0, 0.5], [wall_thickness, wall_width, wall_height]), # 左墙
+            ([0, wall_width, 0.5], [wall_length, wall_thickness, wall_height]),  # 上墙
+            ([0, -wall_width, 0.5], [wall_length, wall_thickness, wall_height])  # 下墙
+        ]
+        
+        for pos, extents in walls_config:
+            v_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=extents, rgbaColor=[0.8, 0.8, 0.8, 1])
+            c_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=extents)
+            wall_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=c_shape, 
+                                        baseVisualShapeIndex=v_shape, basePosition=pos)
+            self.wall_ids.append(wall_id)
+
+    def _create_box_robot(self, pos, color):
+        v = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.2, 0.2, 0.2], rgbaColor=color)
+        c = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.2, 0.2, 0.2])
+        return p.createMultiBody(1, c, v, basePosition=pos)
+
+    def _create_visual_sphere(self, pos, color):
+        visual_shape = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=color)
+        body_id = p.createMultiBody(baseVisualShapeIndex=visual_shape, basePosition=pos)
+        return body_id
 
     def _generate_obstacles(self):
         self.obstacles = []
-        config_id = np.random.randint(0, 1)
+        config_id = np.random.randint(0, 5)
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.3, length=1, rgbaColor=[0.1, 0.1, 0.1, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.3, height=1)
@@ -328,277 +609,23 @@ class FormationPyBulletEnv(gym.Env):
                                        baseVisualShapeIndex=v_shape, basePosition=pos)
             self.obstacles.append(obs_id)
 
-    def _get_obs(self):
-        # --- 1. 获取原始世界坐标系数据 ---
-        pos_A, _ = p.getBasePositionAndOrientation(self.robot_ids[0])
-        vel_A, _ = p.getBaseVelocity(self.robot_ids[0])
-        pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
-        vel_B, _ = p.getBaseVelocity(self.robot_ids[1])
-        
-        # 转换为 numpy 数组 (只取 x, y)
-        pA = np.array(pos_A[:2])
-        vA = np.array(vel_A[:2])
-        pB = np.array(pos_B[:2])
-        vB = np.array(vel_B[:2])
-        
-        center_pos = (pA + pB) / 2.0
-        
-        # --- 2. 构建旋转矩阵 (World -> Body/Target Frame) ---
-        # 以"指向目标的方向"作为 Body Frame 的 X 轴
-        vec_to_goal = self.target_pos[:2] - center_pos
-        angle_to_goal = np.arctan2(vec_to_goal[1], vec_to_goal[0])
-        
-        # 旋转矩阵
-        c, s = np.cos(-angle_to_goal), np.sin(-angle_to_goal)
-        R = np.array([[c, -s], [s, c]])
-        
-        # --- 3. [关键修改] 统一坐标变换 ---
-        
-        # A. 目标向量 (转到 Body Frame)
-        rel_goal_world = self.target_pos[:2] - center_pos
-        rel_goal_body = R @ rel_goal_world # 结果通常是 [dist, 0]
-        
-        # B. 速度向量 (也必须转！否则网络不知道是侧身走还是直走)
-        vA_body = R @ vA
-        vB_body = R @ vB
-        
-        # C. 队友相对位置 (也必须转！否则旋转后队友位置就乱了)
-        rel_AB_world = pB - pA
-        rel_AB_body = R @ rel_AB_world
-        
-        # D. 障碍物信息 (保持你写的逻辑，但加上坐标转换)
-        obs_rel_list = []
-        if self.enable_obstacles:
-            for obs_id in self.obstacles:
-                o_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                rel_o_world = np.array(o_pos[:2]) - center_pos
-                
-                # 转到 Body Frame
-                rel_o_body = R @ rel_o_world
-                
-                dist = np.linalg.norm(rel_o_world)
-                # 过滤掉身后的障碍物 (x < -2.0)
-                if rel_o_body[0] > -2.0: 
-                    # 记录：距离, Body系x, Body系y
-                    obs_rel_list.append((dist, rel_o_body[0], rel_o_body[1]))
-        
-        # 按距离排序
-        obs_rel_list.sort(key=lambda x: x[0])
-
-        # --- 4. 组装 Observation ---
-        obs = [
-            # 目标 (归一化)
-            rel_goal_body[0] / self.wall_length, 
-            rel_goal_body[1] / self.wall_width, 
-            
-            # 速度 (使用转换后的 Body 系速度)
-            vA_body[0], vA_body[1],
-            vB_body[0], vB_body[1],
-            
-            # 队友位置 (使用转换后的 Body 系偏移)
-            # 注意：队友距离一般很近(1.5m)，除以 wall_length(10m) 会变得太小(0.15)
-            # 建议除以一个更小的常数，比如 5.0，让特征更明显
-            rel_AB_body[0] / 5.0, 
-            rel_AB_body[1] / 5.0 
-        ]
-        
-        # 填充障碍物
-        for i in range(self.n_nearest_obs):
-            if i < len(obs_rel_list):
-                obs.extend([
-                    obs_rel_list[i][1] / self.wall_length, 
-                    obs_rel_list[i][2] / self.wall_width
-                ])
-            else:
-                # 无障碍物填远处的默认值
-                obs.extend([1.0, 1.0])
-
-        return np.array(obs, dtype=np.float32)
-    
-    def _compute_reward(self, center_pos, action):
-        reward = 0
-        done = False
-        reason = ""
-        
-        # --- 1. 进度奖励 ---
-        dist_to_goal = np.linalg.norm(center_pos[:2] - self.target_pos[:2])
-        if not hasattr(self, 'last_center_dist'): self.last_center_dist = dist_to_goal
-        
-        
-        reward += (self.last_center_dist - dist_to_goal) * 50.0 
-        self.last_center_dist = dist_to_goal
-
-        # --- 2. [关键] 动作平滑惩罚 (Action Smoothness) ---
-        # 惩罚动作的突变：||a_t - a_{t-1}||
-        # 这对 Follower 能够跟上至关重要！
-        action_diff = np.linalg.norm(action - self.last_action)
-        reward -= action_diff * 0.05  # 系数根据训练情况调，0.5 是经验值
-        # [新增] 存活奖励 (Living Reward)
-        # 抵消掉时间惩罚的一部分，鼓励它在困难环境下活着
-        reward += 0.05
-
-        self.last_action = action.copy() # 更新记录
-
-        # --- 3. [关键] 奇异性避免 (Singularity Avoidance) ---
-        # 防止两个 Leader 靠得太近 (距离 < 0.3) 或太远 (距离 > 5.0)
-        pos_A, _ = p.getBasePositionAndOrientation(self.robot_ids[0])
-        pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
-        dist_AB = np.linalg.norm(np.array(pos_A[:2]) - np.array(pos_B[:2]))
-        
-        # 窄缝通过时允许靠得很近，但不能重合(奇异)
-        if dist_AB < 0.3: 
-            reward -= 10.0 # 危险！接近奇异点
-            # 甚至可以直接 done，因为物理上可能已经穿模了
-            # done = True 
-            # info['done_reason'] = 'singularity'
-        elif dist_AB > 5.0:
-            reward -= (dist_AB - 5.0) * 1.0 # 通信距离限制
-
-
-        # 轻微的时间惩罚，鼓励快点到达
-        reward -= 0.05 # 时间消耗
-
-        # --- 2. 平滑性惩罚 (所有机器人) 后面再加入 ---
-        # total_smooth_penalty = 0
-        # for i, rid in enumerate(self.robot_ids):
-        #     curr_vel, _ = p.getBaseVelocity(rid)
-        #     diff = np.linalg.norm(np.array(curr_vel)[:2] - self.last_vels[i][:2])
-        #     total_smooth_penalty += diff
-        # reward -= total_smooth_penalty * 0.1
-
-
-        # --- 3. [关键修改] 队形柔性约束 ---
-        # 不再强制固定距离，允许放缩。
-        # 我们只给一个“最大/最小距离”的松弛约束，防止太离谱。
-        pos_A, _ = p.getBasePositionAndOrientation(self.robot_ids[0])
-        pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
-        dist_AB = np.linalg.norm(np.array(pos_A[:2]) - np.array(pos_B[:2]))
-        
-        # 假设我们希望他们在 0.8米 到 4.0米 之间自由调整
-        # 只有超出这个范围才惩罚
-        if dist_AB < 0.8:
-            reward -= (0.8 - dist_AB) * 2.0 # 太近了，惩罚重一点
-        elif dist_AB > 4.0:
-            reward -= (dist_AB - 4.0) * 1.0 # 太远了，稍微惩罚
-        
-        # --- 3. [关键修改] 全局避障 (Leader要对Follower负责) ---
-        # 任何一个机器人(包括Follower)撞了，都算Leader的责任
-        
-        # A. 撞墙检测
-        limit_x = self.wall_length - 0.5 - 0.3  # wall_thicknes is 0.5m + robot_radius is 0.2m 留出0.3来
-        limit_y = self.wall_width - 0.5 - 0.3
-        for rid in self.robot_ids:
+    def _get_all_robot_states(self):
+        """辅助函数：获取所有机器人的位置和速度，供 Follower 算法使用"""
+        states = {}
+        for i, rid in enumerate(self.robot_ids):
             pos, _ = p.getBasePositionAndOrientation(rid)
-            if abs(pos[0]) > limit_x or abs(pos[1]) > limit_y:
-                reward -= 20
-                done = True
-                reason = "Wall_Out"
-                break
-             
-        # B. 撞障碍物检测 & 互撞检测
-        if not done:
-            # 获取所有位置
-            all_pos = []
-            for rid in self.robot_ids:
-                p_val, _ = p.getBasePositionAndOrientation(rid)
-                all_pos.append(np.array(p_val[:2]))
-            
-            # 1. 检测互撞 (Leader-Leader, Leader-Follower)
-            # 简单的两两比对
-            import itertools
-            for p1, p2 in itertools.combinations(all_pos, 2):
-                if np.linalg.norm(p1 - p2) < 0.5:
-                    reward -= 20 # 发生互撞
-                    done = True
-                    reason = "Crash_Team"
-                    break
-            
-            # 2. 检测障碍物
-            if self.enable_obstacles and not done:
-                for i, r_pos in enumerate(all_pos):
-                    for obs_id in self.obstacles:
-                        o_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                        d = np.linalg.norm(np.array(o_pos[:2]) - r_pos)
-                        if d < 1.0: # 势场
-                            reward -= (1.0 - d) * 0.5
-                        if d < 0.55: # 碰撞
-                            reward -= 20
-                            done = True
-                            reason = f"Crash_Obstacle (Bot {i})"
-                            break
-                    if done: break
+            vel, _ = p.getBaseVelocity(rid)
+            states[i] = {'pos': np.array(pos), 'vel': np.array(vel)}
+        return states
 
-        # --- 4. 成功与超时 ---
-        if not done and dist_to_goal < 1.0:
-            reward += 200
-            done = True
-            reason = "Success"
-        elif self.current_step >= self.max_steps:
-            done = True
-            reason = "Timeout"
-
-    
-        # if done: print(f"Episode End: {reason}")
-        if done and reason == "Success":
-            print(f"Episode End: {reason}")
-        
-        return reward, {'done': done}
-    
-    def _draw_formation_lines(self):
-        # 画出三角形连接线：A-B, B-F, F-A
-        points = []
-        for rid in self.robot_ids:
-            pos, _ = p.getBasePositionAndOrientation(rid)
-            points.append(pos)
-        
-        # 线条颜色 [R, G, B]
-        line_color = [1, 1, 0] # 黄色
-        
-        # 移除上一帧的线 (如果不移除，画面会变卡且全是线)
-        # 注意：p.removeAllUserDebugItems() 会移除所有 debug 物体。
-        # 如果你想保留其他 debug 物体，应该保存 line_id 并用 removeUserDebugItem
-        # 这里为了简单，我们用 addUserDebugLine 的 replaceItemArgument (需要维护ID)
-        # 或者简单的 removeAll (会把 target sphere 的字也清掉，但不影响 sphere 本身)
-        
-        # 更好的方法：只在第一次创建，后面使用 replace
-        # 这里使用 lifetime 方案，让它自动消失
-        p.addUserDebugLine(points[0], points[1], line_color, lineWidth=2, lifeTime=0.1) # A-B
-        p.addUserDebugLine(points[1], points[2], line_color, lineWidth=2, lifeTime=0.1) # B-F
-        p.addUserDebugLine(points[2], points[0], line_color, lineWidth=2, lifeTime=0.1) # F-A
-
-    def _create_walls(self):
-        """创建四周的围墙"""
-        self.wall_ids = []
-        wall_thickness = 0.5
-        wall_height = 1.0
-        wall_length = self.wall_length   # 围墙长
-        wall_width = self.wall_width    # 围墙宽
-        
-        # 墙的参数: (中心位置, 长宽高)
-        walls_config = [
-            ([wall_length, 0, 0.5], [wall_thickness, wall_width, wall_height]),  # 右墙
-            ([-wall_length, 0, 0.5], [wall_thickness, wall_width, wall_height]), # 左墙
-            ([0, wall_width, 0.5], [wall_length, wall_thickness, wall_height]),  # 上墙
-            ([0, -wall_width, 0.5], [wall_length, wall_thickness, wall_height])  # 下墙
-        ]
-        
-        for pos, extents in walls_config:
-            v_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=extents, rgbaColor=[0.8, 0.8, 0.8, 1])
-            c_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=extents)
-            wall_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=c_shape, 
-                                        baseVisualShapeIndex=v_shape, basePosition=pos)
-            self.wall_ids.append(wall_id)
-
-    def _create_box_robot(self, pos, color):
-        v = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.2, 0.2, 0.2], rgbaColor=color)
-        c = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.2, 0.2, 0.2])
-        return p.createMultiBody(1, c, v, basePosition=pos)
-
-    def _create_visual_sphere(self, pos, color):
-        visual_shape = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=color)
-        body_id = p.createMultiBody(baseVisualShapeIndex=visual_shape, basePosition=pos)
-        return body_id
-
+    def _get_center_pos(self):
+        """计算双车中心点"""
+        pos_list = []
+        for i, robot_id in enumerate(self.robot_ids):
+            pos, _ = p.getBasePositionAndOrientation(robot_id)
+            pos_list.append(np.array(pos))
+        center = np.mean(pos_list, axis=0)
+        return center
 
     def _get_lidar(self, robot_id):
         pos, _ = p.getBasePositionAndOrientation(robot_id)

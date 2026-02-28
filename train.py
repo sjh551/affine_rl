@@ -4,7 +4,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from formation_env import FormationGymEnv
 from pybullet_env import FormationPyBulletEnv
-from leader_env import SingleRobotPyBulletEnv
 import torch.nn as nn
 
 policy_kwargs = dict(
@@ -46,7 +45,7 @@ checkpoint_callback = CheckpointCallback(
 # 3. 增加训练步数
 # 建议至少 50万步，PyBullet 跑得很快，这花不了太久
 model.learn(
-    total_timesteps=1000000, 
+    total_timesteps=500000, 
     callback=checkpoint_callback,
     tb_log_name="stage2_obstacle" # 使用 TensorBoard 记录
 )
