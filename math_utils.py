@@ -49,7 +49,7 @@ def compute_W_matrix(gi, gj, gk, theta=0):
     
     return W_jk, W_ki
 
-def get_3_agent_nominal_config():
+def get_agent_nominal_config():
     """
     为了简单，我们定义一个标准的等腰三角形
     """

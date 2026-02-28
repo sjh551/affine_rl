@@ -5,7 +5,9 @@ import pybullet as p
 import pybullet_data
 import time
 import math
-from math_utils import compute_W_matrix, get_3_agent_nominal_config
+from math_utils import compute_W_matrix, get_agent_nominal_config
+from formation_graph import FormationGraph
+from formation_utils import get_nominal_configuration
 
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True):
@@ -28,7 +30,7 @@ class FormationPyBulletEnv(gym.Env):
         self.robot_radius = 0.25
         
         # --- [整合核心 1] 初始化标称构型和权重 ---
-        self.g_nom = get_3_agent_nominal_config()
+        self.g_nom = get_agent_nominal_config()
         self.W_02, self.W_12, self.W_22_inv = self._init_formation_weights()
 
 
