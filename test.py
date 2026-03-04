@@ -8,11 +8,11 @@ from pybullet_env import FormationPyBulletEnv
 
 # 1. 加载环境和模型
 # 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
 # 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
 try:
-    # model = PPO.load("ppo2_stage1_nav", env=env)
-    model = PPO.load("ppo2_final_leader", env=env)
+    model = PPO.load("ppo2_stage1_nav_full", env=env)
+    # model = PPO.load("ppo2_final_leader", env=env)
     print("✅ 成功加载 RL 模型！")
     # 打印 CUDA 状态和模型所在设备
     try:
@@ -37,13 +37,15 @@ except:
     use_rl = False
 
 # 2. 跑一局测试
-obs = env.reset()
+# 兼容 Gym / Gymnasium：env.reset() 可能返回 obs 或 (obs, info)
+res = env.reset()
+obs = res[0] if isinstance(res, tuple) else res
 done = False
 
 print("正在运行仿真... (请看弹出的 PyBullet 窗口)")
 
 # 用于画图的数据初始化
-all_trajectories = {0:([],[]), 1:([],[]), 2:([],[])}
+all_trajectories = {0:([],[]), 1:([],[]), 2:([],[]),3:([],[]),4:([],[]),5:([],[]),6:([],[]),7:([],[]),8:([],[])} # 9 个智能体的轨迹数据
 
 while not done:
     if use_rl:
@@ -54,7 +56,18 @@ while not done:
         action = env.action_space.sample() 
     
     # 环境执行一步
-    obs, reward, done, info = env.step(action)
+    res = env.step(action)
+    # 处理不同 gym 版本的 step() 返回值：
+    # - Gym (older): obs, reward, done, info
+    # - Gymnasium (new): obs, reward, terminated, truncated, info
+    if isinstance(res, tuple) and len(res) == 5:
+        obs, reward, terminated, truncated, info = res
+        try:
+            done = bool(terminated or truncated)
+        except Exception:
+            done = np.logical_or(terminated, truncated)
+    else:
+        obs, reward, done, info = res
     
     # --- [修正点] 获取 PyBullet 中的坐标 ---
     # PyBullet 环境没有 .pos 属性，必须通过 ID 查询物理引擎
@@ -81,16 +94,24 @@ plt.figure(figsize=(10, 6)) # 调整为长方形比例，适应你的地图
 plt.scatter(env.target_pos[0], env.target_pos[1], c='red', marker='*', s=300, label='Target', zorder=5)
 
 # 画机器人轨迹
-colors = ['r', 'b', 'g']
-labels = ['Leader (RL)', 'Follower 1 (PID)', 'Follower 2 (PID)']
+# 准备颜色与标签（至少为 9 个机器人提供颜色）
+colors = ['r', 'b', 'g', 'c', 'm', 'y', 'k', '#7f7f7f', '#ff7f0e']
+labels = ['Leader (RL)', 'Follower 1 (PID)', 'Follower 2 (PID)', 'Follower 3 (PID)', 'Follower 4 (PID)', 'Follower 5 (PID)', 'Follower 6 (PID)', 'Follower 7 (PID)', 'Follower 8 (PID)']
 
-for i in range(3):
+for i in range(9):
+    # 取出轨迹，防御性编程以避免 KeyError/IndexError
+    traj = all_trajectories.get(i, ([], []))
+    xs, ys = traj[0], traj[1]
+    if not xs or not ys:
+        print(f"跳过机器人 {i}：轨迹为空")
+        continue
+    color = colors[i % len(colors)]
     # 画线
-    plt.plot(all_trajectories[i][0], all_trajectories[i][1], color=colors[i], label=labels[i], linewidth=2)
+    plt.plot(xs, ys, color=color, label=labels[i], linewidth=2)
     # 画起点 (空心圈)
-    plt.scatter(all_trajectories[i][0][0], all_trajectories[i][1][0], c='white', edgecolors=colors[i], s=50)
+    plt.scatter(xs[0], ys[0], c='white', edgecolors=color, s=50)
     # 画终点 (实心圈)
-    plt.scatter(all_trajectories[i][0][-1], all_trajectories[i][1][-1], c=colors[i], s=100)
+    plt.scatter(xs[-1], ys[-1], c=color, s=100)
 
 # 画出障碍物 (方便分析避障效果)
 # 注意：这里我们只能画出大概位置，因为PyBullet获取障碍物形状比较麻烦

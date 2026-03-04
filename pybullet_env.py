@@ -1,11 +1,10 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 import pybullet as p
 import pybullet_data
 import time
 import math
-from math_utils import compute_W_matrix, get_agent_nominal_config
 from formation_graph import FormationGraph
 from formation_utils import get_nominal_configuration
 
@@ -24,114 +23,125 @@ class FormationPyBulletEnv(gym.Env):
         
         # --- 参数配置 ---
         self.n_leaders = 2
-        self.n_followers = 1
-        self.num_robots = self.n_leaders + self.n_followers # 训练两个 Leader + 1 Follower
+        self.n_followers = 7
+        self.num_robots = self.n_leaders + self.n_followers 
         self.robot_ids = []
         self.robot_radius = 0.25
         
         # --- [整合核心 1] 初始化标称构型和权重 ---
-        self.g_nom = get_agent_nominal_config()
-        self.W_02, self.W_12, self.W_22_inv = self._init_formation_weights()
+        self.g_nom = get_nominal_configuration()
 
+        # 2. 构建全局大矩阵并进行 2D 降维分块
+        self._init_global_matrices()
 
         # --- 动作空间 (4维) ---
         # [LeaderA_Vx, LeaderA_Vy, LeaderB_Vx, LeaderB_Vy]
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
         
-        self.n_nearest_obs = 5 # 最近的5个障碍物
-        # --- 观测空间 (38维) ---
+        self.n_nearest_obs = 10 # 最近的6个障碍物 + 四面墙 = 10 个观测点
+        # --- 观测空间 (44维) ---
         # 1. 目标相对向量 (2)
         # 2. A速度(2) + B速度(2)
         # 3. AB相对位置(2)
-        # 4. A的最近5个障碍物 (5 * 2 = 10)
-        # 5. B的最近5个障碍物 (5 * 2 = 10)
-        # 6. C的最近5个障碍物 (5 * 2 = 10)
-        # 2 + 4 + 2 + 10 + 10 + 10 = 38 维
+        # 4. A的最近6个障碍物 (6 * 2 = 12)
+        # 5. B的最近6个障碍物 (6 * 2 = 12)
+        # 6. 两个leader的位置(4)
+        # 2 + 4 + 2 + 12 + 12 = 44 维
         self.n_lidar_rays = 9
         self.lidar_range = 3.0
 
-        obs_dim = 2 + 4 + 2 + (self.n_nearest_obs * 2 * 3)
+        obs_dim = 2 + 4 + 2 + (self.n_nearest_obs * 2 * 2) + 4 
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
+        # print(f"Observation space dimension: {obs_dim}")
         
         self.target_pos = np.array([8.5, 0, 0])
         self.obstacles = []
         self.max_steps = 1500
-        self.wall_length = 10.0
-        self.wall_width = 5.0
+        self.wall_length = 15.0
+        self.wall_width = 10.0
         self.enable_obstacles = enable_obstacles
         self.last_center_dist = None
         # 用于可视化的线段ID
         self.debug_line_ids = []
 
-    def _init_formation_weights(self):
+    def _init_global_matrices(self):
         """
-        计算 Follower 的权重矩阵
-        [关键修改]：只取前两维 (X, Y)，扔掉第三维 (Angle)，避免奇异性。
+        构建 9 个智能体的全局拉普拉斯矩阵，并剔除角度维度，进行分块
         """
-        theta = 0 
-        g0 = self.g_nom[0] # Leader A
-        g1 = self.g_nom[1] # Leader B
-        g2 = self.g_nom[2] # Follower
+        # 1. 构建 27x27 的矩阵 M
+        fg = FormationGraph(self.g_nom)
+        M_3d = fg.build_laplacian(theta=0)
         
-        # 1. 计算原始 3x3 矩阵
-        W_12_3x3, W_02_3x3 = compute_W_matrix(g0, g1, g2, theta)
+        # 2. 提取 2D 维度 (只保留 x 和 y 的行与列)
+        # 生成保留的索引: 0,1, 3,4, 6,7, ..., 24,25
+        idx_2d = [i * 3 + j for i in range(9) for j in range(2)]
         
-        # 2. [新增步骤] 矩阵切片：只保留前 2 行前 2 列
-        # 变成 2x2 矩阵
-        self.W_02 = W_02_3x3[:2, :2]
-        self.W_12 = W_12_3x3[:2, :2]
+        # 使用 numpy 的高级索引抽取 18x18 矩阵
+        self.M_2d = M_3d[np.ix_(idx_2d, idx_2d)]
         
-        # 3. 计算 M_22 (2x2)
-        M_22 = self.W_02 + self.W_12
+        # 3. 提取 2D 标称构型 (转成 1D 数组方便矩阵相乘)
+        g_nom_2d_list = [g[:2] for g in self.g_nom]
+        self.g_nom_flat = np.concatenate(g_nom_2d_list) # shape: (18,)
         
-        # 4. 求逆 (现在 M_22 是 [[-0.4, 0], [0, -2]]，完全可逆！)
-        self.W_22_inv = np.linalg.inv(M_22)
+        # 4. 矩阵分块 (Leaders: 前 4 行/列; Followers: 后 14 行/列)
+        split_idx = self.n_leaders * 2 # 2 个 leader * 2D = 4
         
-        return self.W_02, self.W_12, self.W_22_inv
+        self.M_ff = self.M_2d[split_idx:, split_idx:] # (14, 14)
+        self.M_fl = self.M_2d[split_idx:, :split_idx] # (14, 4)
+        
+        # 5. 提前求逆 (极大提升仿真速度)
+        self.M_ff_inv = np.linalg.inv(self.M_ff)
 
-
-    def reset(self):
+    def reset(self,seed=None, options=None):
+        super().reset(seed=seed)
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
         p.loadURDF("plane.urdf")
         
         # --- 创建围墙 ---
         self._create_walls()
-        
-        # --- [修改] 基于标称构型生成初始位置 ---
-        # 1. 确定编队生成的中心点 (比如在左侧起跑线)
-        start_center = np.array([-self.wall_length + 4.0, 0.0, 0.25])
-        
-        # 2. 读取标称构型 (我们在 __init__ 里定义的 g_nom)
-        # 假设 g_nom 是以 (0,0) 为中心的
-        # 格式: {0: [0, 1], 1: [0, -1], 2: [-1, 0]}
 
 
         # --- 创建两个 Leader ---
         self.robot_ids = []
+        spawned_positions = []
+        
+        # 1. 随机生成一个队伍的起跑中心点
+        start_center = np.array([
+            np.random.uniform(-self.wall_length + 5.0, -self.wall_length + 5.2),
+            np.random.uniform(-self.wall_width + 6.0, -self.wall_width + 6.2)
+        ])
+        
+        # 2. 带有剧烈噪声的标称排布
+        for i in range(self.num_robots):
+            while True:
+                # 获取标称偏移，并加入大幅度的随机噪声 (-0.8m 到 +0.8m)
+                # 这样阵型一开始是极度扭曲、松散且不规则的，满足了控制论文"初始位置随机"的要求
+                noise_x = np.random.uniform(-0.8, 0.8)
+                noise_y = np.random.uniform(-0.8, 0.8)
+                
+                rx = start_center[0] + self.g_nom[i][0] + noise_x
+                ry = start_center[1] + self.g_nom[i][1] + noise_y
+                
+                # 查重，防止直接重叠穿模
+                is_safe = True
+                for p_exist in spawned_positions:
+                    if np.linalg.norm(np.array([rx, ry]) - np.array(p_exist)) < 0.6:
+                        is_safe = False
+                        break
+                
+                if is_safe:
+                    spawned_positions.append([rx, ry])
+                    spawn_pos = [rx, ry, 0.25]
+                    color = [1, 0, 0, 1] if i < 2 else [0, 1, 0, 1]
+                    rid = self._create_box_robot(spawn_pos, color)
+                    self.robot_ids.append(rid)
+                    break
 
-        # 遍历三个智能体 (0:L1, 1:L2, 2:F)
-        for i in range(3):
-            # 取出标称偏移量 (2D)
-            offset = self.g_nom[i] 
-            
-            # 计算实际生成位置: 中心 + 偏移
-            spawn_pos = [
-                start_center[0] + offset[0], # x
-                start_center[1] + offset[1], # y
-                0.25                         # z (高度固定)
-            ]
-            
-            # 颜色区分: Leader(红), Follower(绿)
-            color = [1, 0, 0, 1] if i < 2 else [0, 1, 0, 1]
-            
-            # 创建机器人
-            rid = self._create_box_robot(spawn_pos, color)
-            self.robot_ids.append(rid)  
 
         # --- 随机生成目标点 ---
-        tx = np.random.uniform(self.wall_length-3.0, self.wall_length-2.0)
-        ty = np.random.uniform(-self.wall_width+2.0, self.wall_width-2.0)
+        tx = np.random.uniform(self.wall_length-5.0, self.wall_length-4.0)
+        ty = np.random.uniform(-self.wall_width+4.0, self.wall_width-4.0)
         self.target_pos = np.array([tx, ty, 0])
         self._create_visual_sphere(self.target_pos, [0, 1, 0, 0.5])
         
@@ -157,8 +167,10 @@ class FormationPyBulletEnv(gym.Env):
         # 清除旧的线
         p.removeAllUserDebugItems()
         self.debug_line_ids = []
+
+        obs = self._get_obs()
         
-        return self._get_obs()
+        return obs, {}
 
     def step(self, action):
         self.current_step += 1
@@ -199,11 +211,15 @@ class FormationPyBulletEnv(gym.Env):
         # --- 2. Follower 控制 (外部算法接口) ---
         # 获取当前所有机器人的状态传给算法
         states = self._get_all_robot_states()
-        follower_vel = self._control_follower(states)
-        p.resetBaseVelocity(self.robot_ids[2], linearVelocity=follower_vel)
+        # 获取速度列表
+        follower_vels = self._control_follower(states)
+        # 遍历 7 个跟随者 (ID 从 2 到 8)
+        for idx, f_vel in enumerate(follower_vels):
+            robot_id = self.robot_ids[idx + 2] 
+            p.resetBaseVelocity(robot_id, linearVelocity=f_vel)
 
         # --- 3. 物理仿真 (高频率) ---
-        for _ in range(20): 
+        for _ in range(24): 
             p.stepSimulation()
 
         # --- 4. 可视化队形连线 (画三角形) ---
@@ -223,7 +239,16 @@ class FormationPyBulletEnv(gym.Env):
             v, _ = p.getBaseVelocity(rid)
             self.last_vels[i] = np.array(v)
 
-        return obs, reward, done, {}
+        # 如果是因为超过最大步数结束的，属于 truncated
+        # 如果是因为撞墙、撞障碍物或到达终点结束的，属于 terminated
+        if done and self.current_step >= self.max_steps:
+            terminated = False
+            truncated = True
+        else:
+            terminated = done
+            truncated = False
+
+        return obs, reward, terminated, truncated, {}
     
     
     # ============================================================
@@ -231,41 +256,50 @@ class FormationPyBulletEnv(gym.Env):
     # ============================================================
     def _control_follower(self, states):
         """
-        使用 2D 矩阵进行控制计算
+        使用全局矩阵一次性计算 7 个跟随者的目标速度
         """
-        # 1. 获取实时状态 (只取前 2 维: x, y)
-        p0 = states[0]['pos'][:2] # Leader A pos (2D)
-        v0 = states[0]['vel'][:2] # Leader A vel (2D)
+        # 1. 提取实时的全局状态 (只取 x, y)
+        # p_all shape: (18,), v_l shape: (4,)
+        p_all = []
+        for i in range(9):
+            p_all.extend(states[i]['pos'][:2])
+        p_flat = np.array(p_all)
         
-        p1 = states[1]['pos'][:2] # Leader B pos (2D)
-        v1 = states[1]['vel'][:2] # Leader B vel (2D)
+        v_l = []
+        for i in range(2):
+            v_l.extend(states[i]['vel'][:2])
+        v_l_flat = np.array(v_l)
         
-        p2 = states[2]['pos'][:2] # Follower pos (2D)
-        # v2 不是必须的，因为我们要算的是目标速度
+        k_f = 2.0 # 跟随者增益
         
-        # 2. 计算 2D 相对误差
-        g_02 = p0 - p2 # 2D vector
-        g_12 = p1 - p2 # 2D vector
+        # 2. 核心数学公式：v_f = M_ff_inv @ ( -k_f * (M @ p)_f - M_fl @ v_l )
+        # 计算全局误差
+        error_global = -k_f * (self.M_2d @ p_flat)
         
-        k_f = 2.0 
+        # 截取属于 Followers 的部分 (后 14 维)
+        error_f = error_global[4:]
         
-        # 3. 计算控制律 (全是 2x2 矩阵 @ 2D 向量)
-        # term_L0: (2x2) @ (2,) -> (2,)
-
-        term_L1 = self.W_02 @ (k_f * g_12 + v1)
-        term_L0 = self.W_12 @ (k_f * g_02 + v0)
+        # 计算 Leader 运动带来的耦合项
+        coupling_f = -self.M_fl @ v_l_flat
         
-        target_vel_2d = self.W_22_inv @ (term_L0 + term_L1)
+        # 求解 7 个 Follower 的 2D 速度 (shape: 14,)
+        v_f_flat = self.M_ff_inv @ (error_f + coupling_f)
         
-        # 4. 转换回 PyBullet 格式 (拼上 Z轴速度 0)
-        control_vel = np.array([target_vel_2d[0], target_vel_2d[1], 0.0])
-        
-        # 5. 安全限幅
-        speed = np.linalg.norm(control_vel)
-        if speed > 1.5:
-            control_vel = control_vel / speed * 1.5
+        # 3. 解析回各个机器人的 3D 速度并安全限幅
+        follower_vels = []
+        for i in range(7):
+            vx = v_f_flat[i*2]
+            vy = v_f_flat[i*2 + 1]
+            vel_3d = np.array([vx, vy, 0.0])
             
-        return control_vel
+            # 限幅
+            speed = np.linalg.norm(vel_3d)
+            if speed > 1.5:
+                vel_3d = vel_3d / speed * 1.5
+                
+            follower_vels.append(vel_3d)
+            
+        return follower_vels
     
     def _get_obs(self):
         # --- 1. 获取原始世界坐标系数据 ---
@@ -274,15 +308,15 @@ class FormationPyBulletEnv(gym.Env):
         pos_B, _ = p.getBasePositionAndOrientation(self.robot_ids[1])
         vel_B, _ = p.getBaseVelocity(self.robot_ids[1])
         # states of followers 
-        pos_C, _ = p.getBasePositionAndOrientation(self.robot_ids[2])
-        vel_C, _ = p.getBaseVelocity(self.robot_ids[2])
+        # pos_C, _ = p.getBasePositionAndOrientation(self.robot_ids[2])
+        # vel_C, _ = p.getBaseVelocity(self.robot_ids[2])
         
         # 转换为 numpy 数组 (只取 x, y)
         pA = np.array(pos_A[:2])
         vA = np.array(vel_A[:2])
         pB = np.array(pos_B[:2])
         vB = np.array(vel_B[:2])
-        pC = np.array(pos_C[:2])  # 提取 Follower 的 2D 坐标
+        # pC = np.array(pos_C[:2])  # 提取 Follower 的 2D 坐标
 
         # the centroid of the whole formation
         center_pos = self._get_center_pos()[:2] # 只取 x, y
@@ -309,11 +343,37 @@ class FormationPyBulletEnv(gym.Env):
         # C. 队友相对位置 (也必须转！否则旋转后队友位置就乱了)
         rel_AB_world = pB - pA
         rel_AB_body = R @ rel_AB_world
+
+        # D. Leader A 和 B 的位置 (转到 Body Frame)
+        pos_A_body = R @ pA
+        pos_B_body = R @ pB 
         
         # --- 4. [核心重构] 分别计算障碍物相对于 A, B, C 的位置 ---
         # 为了避免写三次重复代码，定义一个局部辅助函数
         def get_agent_obs_features(agent_pos):
             obs_rel_list = []
+            rx, ry = agent_pos[0], agent_pos[1]
+            
+            # 计算到四面墙的最近点向量 (世界坐标系)
+            # 格式: (距离, 世界向量x, 世界向量y)
+            walls_info = [
+                # 右墙 (X正向)
+                (self.wall_length - 0.5 - rx, np.array([self.wall_length - 0.5 - rx, 0])),
+                # 左墙 (X负向)
+                (rx - (-self.wall_length + 0.5), np.array([- (rx - (-self.wall_length + 0.5)), 0])),
+                # 上墙 (Y正向)
+                (self.wall_width - 0.5 - ry, np.array([0, self.wall_width - 0.5 - ry])),
+                # 下墙 (Y负向)
+                (ry - (-self.wall_width + 0.5), np.array([0, - (ry - (-self.wall_width + 0.5))]))
+            ]
+
+            for dist, rel_wall_world in walls_info:
+                # 旋转到 Body Frame
+                rel_wall_body = R @ rel_wall_world
+                # 过滤掉身后的墙壁 (比如 x < -2.0)，只关注前方和侧面的威胁
+                if rel_wall_body[0] > -2.0:
+                    obs_rel_list.append((dist, rel_wall_body[0], rel_wall_body[1]))
+
             if self.enable_obstacles:
                 for obs_id in self.obstacles:
                     o_pos, _ = p.getBasePositionAndOrientation(obs_id)
@@ -342,16 +402,21 @@ class FormationPyBulletEnv(gym.Env):
                     features.extend([1.0, 1.0])
             return features
 
-        # 分别获取 A, B, C 身边的障碍物特征
+        # 分别获取 A, B 身边的障碍物特征
         obs_features_A = get_agent_obs_features(pA)
         obs_features_B = get_agent_obs_features(pB)
-        obs_features_C = get_agent_obs_features(pC)
 
         # --- 5. 组装最终的 Observation ---
         obs = [
             # 目标 (2维)
             rel_goal_body[0] / self.wall_length, 
             rel_goal_body[1] / self.wall_width, 
+
+            # 位置 （4维，转到 Body Frame）
+            pos_A_body[0] / self.wall_length,
+            pos_A_body[1] / self.wall_width,
+            pos_B_body[0] / self.wall_length,
+            pos_B_body[1] / self.wall_width,
             
             # 速度 (4维)
             vA_body[0], vA_body[1],
@@ -362,10 +427,9 @@ class FormationPyBulletEnv(gym.Env):
             rel_AB_body[1] / self.wall_width
         ]
         
-        # 拼接三个智能体的障碍物信息
+        # 拼接智能体的障碍物信息
         obs.extend(obs_features_A)
         obs.extend(obs_features_B)
-        obs.extend(obs_features_C)
 
         return np.array(obs, dtype=np.float32)
     
@@ -379,7 +443,7 @@ class FormationPyBulletEnv(gym.Env):
         if not hasattr(self, 'last_center_dist'): self.last_center_dist = dist_to_goal
         
         
-        reward += (self.last_center_dist - dist_to_goal) * 50.0 
+        reward += (self.last_center_dist - dist_to_goal) * 20.0
         self.last_center_dist = dist_to_goal
 
         # --- 2. 动作平滑惩罚 (Action Smoothness) ---
@@ -404,29 +468,36 @@ class FormationPyBulletEnv(gym.Env):
         # A. 奇异性避免 (靠得太近极度危险)
         dist_AB = np.linalg.norm(actual_vec)
         if dist_AB < 0.8: 
-            reward -= 10.0 # 危险！接近穿模
-            
+            reward -= 2.0 # 危险！接近穿模
+
         # 极端通信断连惩罚
-        if dist_AB > 5.0:
-            reward -= (dist_AB - 5.0) * 1.0
+        if dist_AB > 6.0:
+            reward -= (dist_AB - 6.0) * 0.2
+            
 
         # B. 向量误差约束 (Vector Error Constraint)
         # 获取标称构型下的期望向量 (假设 g_nom 里存的是世界坐标系下的偏移)
         # desired_vec 就是 Leader B 应该在 Leader A 的什么相对位置
-        if dist_to_goal < 2.5: # 只有在接近目标时才严格要求队形，否则允许更大误差
-            desired_vec = np.array(self.g_nom[1][:2]) - np.array(self.g_nom[0][:2])
-            # 计算向量差异 (同时约束了距离放缩和过度旋转)
+        nom_vec = np.array(self.g_nom[1][:2]) - np.array(self.g_nom[0][:2]) # 原始 [6, 6]
+        # 使用等比例缩放，避免队伍长宽比严重失调导致碰撞
+        if 2.0 < dist_to_goal < 5.0:
+            # 第一阶段收缩：缩小到 60% (目标长度约 5.0)
+            scale = 0.8
+            desired_vec = nom_vec * scale
             vec_error = np.linalg.norm(actual_vec - desired_vec)
-            
-            # 柔性约束：允许一定程度的变形避障 (比如误差在 0.5 米以内不怎么罚)
             if vec_error > 0.5:
-                # 误差越大，惩罚越重。乘 2.0 是一个经验系数
-                reward -= (vec_error - 0.5) * 10.0 
-
-
-        # 轻微的时间惩罚，鼓励快点到达
-        reward -= 0.05 # 时间消耗
+                reward -= (vec_error - 0.5) * 1.0
+                
+        elif dist_to_goal <= 2.0:
+            # 第二阶段极限收缩：缩小到 35% (目标长度约 3.0，挤在一起过终点)
+            scale = 0.6
+            desired_vec = nom_vec * scale
+            vec_error = np.linalg.norm(actual_vec - desired_vec)
+            if vec_error > 0.5:
+                reward -= (vec_error - 0.5) * 1.5  # 离终点越近，阵型要求越严
         
+        reward -= 0.01  # 每步固定的时间惩罚，鼓励更快完成任务
+
         # --- 4. 全局避障 (Leader要对Follower负责) ---
         # 任何一个机器人(包括Follower)撞了，都算Leader的责任
         
@@ -436,7 +507,7 @@ class FormationPyBulletEnv(gym.Env):
         for rid in self.robot_ids:
             pos, _ = p.getBasePositionAndOrientation(rid)
             if abs(pos[0]) > limit_x or abs(pos[1]) > limit_y:
-                reward -= 50
+                reward -= 10
                 done = True
                 reason = "Wall_Out"
                 break
@@ -453,22 +524,42 @@ class FormationPyBulletEnv(gym.Env):
             # 简单的两两比对
             import itertools
             for p1, p2 in itertools.combinations(all_pos, 2):
-                if np.linalg.norm(p1 - p2) < 0.5:
-                    reward -= 50 # 发生互撞
+                if np.linalg.norm(p1 - p2) < 0.6:
+                    reward -= 10 # 发生互撞
                     done = True
                     reason = "Crash_Team"
                     break
             
+            # ==========================================
+            # [核心新增] 2. 领航者与跟随者之间的“倒车雷达”势场
+            # 逼迫 Leader 主动与 Follower 保持安全距离
+            # ==========================================
+            if not done:
+                for l_idx in [0, 1]:  # 遍历两个 Leader (索引 0 和 1)
+                    p_leader = all_pos[l_idx]
+                    for f_idx in range(2, len(all_pos)): # 遍历所有 Follower (索引 2 到最后)
+                        p_follower = all_pos[f_idx]
+                        dist_lf = np.linalg.norm(p_leader - p_follower)
+                        
+                        safe_margin = 0.9 # 设定的警戒距离
+                        if dist_lf < safe_margin:
+                            # 距离越近，扣分越狠 (类似障碍物势场)
+                            # 系数设为 2.0，不要太大，免得盖过找目标的奖励
+                            team_repulsion = 2.0 / (dist_lf + 0.1) - 2.0 / (safe_margin + 0.1)
+                            reward -= team_repulsion
+            # ==========================================
+
             # 2. 检测障碍物
             if self.enable_obstacles and not done:
                 for i, r_pos in enumerate(all_pos):
                     for obs_id in self.obstacles:
                         o_pos, _ = p.getBasePositionAndOrientation(obs_id)
                         d = np.linalg.norm(np.array(o_pos[:2]) - r_pos)
-                        if d < 1.0: # 势场
-                            reward -= (1.0 - d) * 0.5
+                        if 0.6 <= d < 1.2: # 势场
+                            repulsion = 3.0 / (d + 0.1) - 3.0 / (1.2 + 0.1) 
+                            reward -= repulsion
                         if d < 0.6: # 碰撞
-                            reward -= 50
+                            reward -= 10
                             done = True
                             reason = f"Crash_Obstacle (Bot {i})"
                             break
@@ -476,7 +567,7 @@ class FormationPyBulletEnv(gym.Env):
 
         # --- 5. 成功与超时 ---
         if not done and dist_to_goal < 1.0:
-            reward += 200
+            reward += 40
             done = True
             reason = "Success"
         elif self.current_step >= self.max_steps:
@@ -485,32 +576,46 @@ class FormationPyBulletEnv(gym.Env):
 
     
         # if done: print(f"Episode End: {reason}")
-        # if done and reason == "Success":
-        #     print(f"Episode End: {reason}")
+        if done and reason == "Success":
+            print(f"Episode End: {reason}")
         
         return reward, {'done': done}
     
     def _draw_formation_lines(self):
-        # 画出三角形连接线：A-B, B-F, F-A
+        """
+        可视化 9 智能体编队的拓扑连线
+        """
+        # 1. 获取所有 9 个机器人的当前位置
         points = []
         for rid in self.robot_ids:
             pos, _ = p.getBasePositionAndOrientation(rid)
             points.append(pos)
         
-        # 线条颜色 [R, G, B]
-        line_color = [1, 1, 0] # 黄色
+        # 线条颜色 [R, G, B] - 这里用黄色
+        line_color = [1, 1, 0] 
         
-        # 移除上一帧的线 (如果不移除，画面会变卡且全是线)
-        # 注意：p.removeAllUserDebugItems() 会移除所有 debug 物体。
-        # 如果你想保留其他 debug 物体，应该保存 line_id 并用 removeUserDebugItem
-        # 这里为了简单，我们用 addUserDebugLine 的 replaceItemArgument (需要维护ID)
-        # 或者简单的 removeAll (会把 target sphere 的字也清掉，但不影响 sphere 本身)
+        # 2. 定义 9 智能体的图拓扑边 (根据 formation_graph.py 中的 DEP 路径)
+        # 注意：索引 0 是 Leader A(g1)，1 是 Leader B(g2)
+        edges = [
+            # Path 1 (中间主干路)
+            (0, 4), (4, 3), (3, 2), (2, 1), 
+            # Path 2 (上方支路)
+            (0, 6), (6, 5), (5, 4),         
+            # Path 3 (下方支路)
+            (2, 7), (7, 8), (8, 1)          
+        ]
         
-        # 更好的方法：只在第一次创建，后面使用 replace
-        # 这里使用 lifetime 方案，让它自动消失
-        p.addUserDebugLine(points[0], points[1], line_color, lineWidth=2, lifeTime=0.1) # A-B
-        p.addUserDebugLine(points[1], points[2], line_color, lineWidth=2, lifeTime=0.1) # B-F
-        p.addUserDebugLine(points[2], points[0], line_color, lineWidth=2, lifeTime=0.1) # F-A
+        # 3. 遍历所有的拓扑边，并在 PyBullet 中画线
+        for u, v in edges:
+            # 加入越界保护：确保在 robot_ids 还没完全生成时不会报错
+            if u < len(points) and v < len(points):
+                p.addUserDebugLine(
+                    lineFromXYZ=points[u], 
+                    lineToXYZ=points[v], 
+                    lineColorRGB=line_color, 
+                    lineWidth=2, 
+                    lifeTime=0.1 # 0.1秒后自动消失，避免画面被线段填满
+                )
 
     def _create_walls(self):
         """创建四周的围墙"""
@@ -621,7 +726,7 @@ class FormationPyBulletEnv(gym.Env):
         return states
 
     def _get_center_pos(self):
-        """计算双车中心点"""
+        """计算编队中心点"""
         pos_list = []
         for i, robot_id in enumerate(self.robot_ids):
             pos, _ = p.getBasePositionAndOrientation(robot_id)

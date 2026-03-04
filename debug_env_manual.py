@@ -4,7 +4,7 @@ import numpy as np
 from pybullet_env import FormationPyBulletEnv
 
 # 初始化环境
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
 env.reset()
 
 print("================================================")
@@ -48,7 +48,8 @@ while True:
         continue
 
     # 3. 喂给环境
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, truncated, info = env.step(action)
+    done = terminated or truncated
     
     # 4. 实时打印奖励，帮你调试 Reward 函数写得对不对
     # \r 可以让打印在同一行刷新，不会刷屏
