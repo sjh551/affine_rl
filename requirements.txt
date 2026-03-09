@@ -1,0 +1,16 @@
+# --- 核心数值与科学计算 ---
+numpy
+scipy
+
+# --- 物理引擎与强化学习环境 ---
+gymnasium
+pybullet
+gym
+
+# --- 强化学习算法库 (含 PyTorch 后端) ---
+torch
+stable-baselines3
+
+# --- 可视化与日志记录 ---
+matplotlib
+tensorboard
