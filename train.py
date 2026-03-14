@@ -2,12 +2,13 @@ import os
 import time
 import torch.nn as nn
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 
 # 导入自定义环境
 from pybullet_env import FormationPyBulletEnv
+
 
 # ======================================================================
 # 🛠️ 超参数与流程控制中心
@@ -18,16 +19,36 @@ START_STAGE = 1            # 🚩 选择开始阶段: 1 (无障碍) 或 2 (有�
 
 # 2. 模型加载配置
 # 如果想从头开始训练某个阶段，设为 True
-START_FROM_SCRATCH = True 
+START_FROM_SCRATCH = False 
 
 # 如果 START_FROM_SCRATCH 为 False，指定要加载的文件名 (不带 .zip)
 # 例子: "ppo2_stage1_nav" 或 "ppo2_final_leader"
 LOAD_MODEL_NAME = "ppo2_stage1_nav" 
 
 # 3. 训练长度
-TIMESTEPS_STAGE1 = 1000000
+TIMESTEPS_STAGE1 = 500000
 TIMESTEPS_STAGE2 = 100000
 # ======================================================================
+
+
+class TensorboardRewardCallback(BaseCallback):
+    """
+    自定义回调函数：用于捕获 info 字典里的分类奖励，并记录到 TensorBoard。
+    """
+    def __init__(self, verbose=0):
+        super(TensorboardRewardCallback, self).__init__(verbose)
+
+    def _on_step(self) -> bool:
+        # 遍历所有并行环境返回的 info 字典
+        for info in self.locals.get("infos", []):
+            # 只有当环境返回了我们自定义的 key（说明这局刚结束），才记录
+            if "ep_rew_progress" in info:
+                # 记录到 TensorBoard 的 "custom_rewards" 标签页下
+                self.logger.record("custom_rewards/ep_rew_progress", info["ep_rew_progress"])
+                self.logger.record("custom_rewards/ep_rew_shape", info["ep_rew_shape"])
+                self.logger.record("custom_rewards/ep_rew_collision", info["ep_rew_collision"])
+                self.logger.record("custom_rewards/ep_rew_time", info["ep_rew_time"])
+        return True
 
 def make_env(enable_obstacles=False):
     def _init():
@@ -47,7 +68,7 @@ if __name__ == '__main__':
         activation_fn=nn.Tanh,
         net_arch=dict(pi=[512, 512], vf=[512, 512])
     )
-
+    tb_reward_callback = TensorboardRewardCallback()
     # ------------------------------------------------------------------
     # 🏁 阶段一：基础导航训练 (无障碍)
     # ------------------------------------------------------------------
@@ -71,7 +92,8 @@ if __name__ == '__main__':
             print(f"载入模型继续训练: {LOAD_MODEL_NAME}")
             model = PPO.load(LOAD_MODEL_NAME, env=env, tensorboard_log="./ppo2_stage1_tensorboard/", device="auto")
 
-        model.learn(total_timesteps=TIMESTEPS_STAGE1, tb_log_name="stage1_nav")
+
+        model.learn(total_timesteps=TIMESTEPS_STAGE1, tb_log_name="stage1_nav", callback=tb_reward_callback)
         model.save("ppo2_stage1_nav")
         env.close()
         print("✅ 阶段 1 训练结束并保存模型。")
@@ -96,7 +118,7 @@ if __name__ == '__main__':
                              tensorboard_log="./ppo2_stage2_tensorboard/", device="auto")
 
         # 设置自动保存回调
-        save_freq = max(100000 // NUM_ENVS, 1)
+        save_freq = max(1000000 // NUM_ENVS, 1)
         checkpoint_callback = CheckpointCallback(
             save_freq=save_freq, 
             save_path='./logs_checkpoints/',
@@ -105,7 +127,7 @@ if __name__ == '__main__':
 
         model.learn(
             total_timesteps=TIMESTEPS_STAGE2,
-            callback=checkpoint_callback,
+            callback=[tb_reward_callback, checkpoint_callback],
             tb_log_name=f"stage2_obs_from_{LOAD_MODEL_NAME}"
         )
 

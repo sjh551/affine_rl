@@ -8,11 +8,11 @@ from pybullet_env import FormationPyBulletEnv
 
 # 1. 加载环境和模型
 # 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
 # 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
 try:
-    model = PPO.load("ppo2_stage1_nav", env=env)
-    # model = PPO.load("ppo2_final_leader", env=env)
+    # model = PPO.load("ppo2_stage1_nav", env=env)
+    model = PPO.load("ppo2_final_leader", env=env)
     print("✅ 成功加载 RL 模型！")
     # 打印 CUDA 状态和模型所在设备
     try:
@@ -95,7 +95,7 @@ plt.scatter(env.target_pos[0], env.target_pos[1], c='red', marker='*', s=300, la
 
 # 画机器人轨迹
 # 准备颜色与标签（至少为 9 个机器人提供颜色）
-colors = ['r', 'b', 'g', 'c', 'm', 'y', 'k', '#7f7f7f', '#ff7f0e']
+colors = ['r', 'b', 'g', 'c', 'm', 'y', 'k', '#7f7f7f', "#CE782C"]
 labels = ['Leader 1', 'Leader 2','Follower 1', 'Follower 2', 'Follower 3', 'Follower 4', 'Follower 5', 'Follower 6', 'Follower 7',]
 
 for i in range(9):
