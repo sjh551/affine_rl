@@ -17,18 +17,18 @@ from pybullet_env import FormationPyBulletEnv
 # ======================================================================
 # 1. 训练配置
 NUM_ENVS = 2               # 并行环境数
-START_STAGE = 2            # 🚩 选择开始阶段: 1 (无障碍) 或 2 (有障碍)
+START_STAGE = 1            # 🚩 选择开始阶段: 1 (无障碍) 或 2 (有障碍)
 
 # 2. 模型加载配置
 # 如果想从头开始训练某个阶段，设为 True
-START_FROM_SCRATCH = False 
+START_FROM_SCRATCH = True 
 
 # 如果 START_FROM_SCRATCH 为 False，指定要加载的文件名 (不带 .zip)
 # 例子: "ppo2_stage1_nav" 或 "ppo2_final_leader"
 LOAD_MODEL_NAME = "ppo2_stage1_nav" 
 
 # 3. 训练长度
-TIMESTEPS_STAGE1 = 500000
+TIMESTEPS_STAGE1 = 1000000
 TIMESTEPS_STAGE2 = 500000
 # ======================================================================
 
@@ -99,6 +99,7 @@ class TensorboardRewardCallback(BaseCallback):
                 self.logger.record("custom_rewards/ep_rew_shape", info["ep_rew_shape"])
                 self.logger.record("custom_rewards/ep_rew_collision", info["ep_rew_collision"])
                 self.logger.record("custom_rewards/ep_rew_smooth", info["ep_rew_smooth"])
+                self.logger.record("custom_rewards/ep_rew_time", info["ep_rew_time"])
         return True
 
 def make_env(enable_obstacles=False):

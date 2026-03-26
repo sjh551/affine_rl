@@ -13,7 +13,7 @@ print("开始 PyBullet 仿真...")
 for i in range(1000):
     # 简单的测试动作：向目标方向移动
     # 这里的 obs[0], obs[1] 是目标相对位置 (参见 _get_obs)
-    action = np.array([obs[0], obs[1], obs[0], obs[1]])
+    action = np.array([obs['kinematics'][0], 0, 0, obs['kinematics'][0], 0, 0])
     
     # 稍微加点随机扰动，看 Follower 跟得稳不稳
     action[0] += np.random.normal(0, 0.1)

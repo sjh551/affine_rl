@@ -11,7 +11,8 @@ p.loadURDF("plane.urdf")
 
 # 2. 加载 Ranger Mini V3 模型
 # 请确保你的 URDF 和 meshes 路径正确
-robot_id = p.loadURDF("ranger_mini_v3/urdf/ranger_mini.urdf", basePosition=[0, 0, 0.15])
+for i in range(4):
+    robot_id = p.loadURDF("ranger_mini_v3/urdf/ranger_mini.urdf", basePosition=[0-i*2.0, 0, 0.15])
 
 # 3. 核心索引配置 (根据你之前提供的 ID 信息)
 # 对应顺序: [FL, FR, RL, RR]

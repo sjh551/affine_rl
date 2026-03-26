@@ -8,11 +8,11 @@ from pybullet_env import FormationPyBulletEnv
 
 # 1. 加载环境和模型
 # 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
 # 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
 try:
-    # model = PPO.load("ppo2_stage1_nav", env=env)
-    model = PPO.load("ppo2_final_leader", env=env)
+    model = PPO.load("ppo2_stage1_nav", env=env)
+    # model = PPO.load("ppo2_final_leader", env=env)
     print("✅ 成功加载 RL 模型！")
     # 打印 CUDA 状态和模型所在设备
     try:
@@ -69,7 +69,6 @@ while not done:
     else:
         obs, reward, done, info = res
     
-    # --- [修正点] 获取 PyBullet 中的坐标 ---
     # PyBullet 环境没有 .pos 属性，必须通过 ID 查询物理引擎
     for i, robot_id in enumerate(env.robot_ids):
         # p.getBasePositionAndOrientation 返回 ((x,y,z), (qx,qy,qz,qw))
@@ -85,6 +84,29 @@ while not done:
 
 # 关闭物理引擎
 env.close()
+yawA = env.delta_yaw_his_A
+yawB = env.delta_yaw_his_B
+steps = np.arange(len(yawA))
+
+# plt.figure(figsize=(12,5))
+
+# plt.subplot(1,2,1)
+# plt.plot(steps, yawA, label='delta_yaw_A', color='r', linewidth=1.5)
+# plt.title('delta_yaw_A 变化曲线')
+# plt.xlabel('Step')
+# plt.ylabel('Angle (rad)')
+# plt.grid(True)
+# plt.legend()
+
+# plt.subplot(1,2,2)
+# plt.plot(steps, yawB, label='delta_yaw_B', color='b', linewidth=1.5)
+# plt.title('delta_yaw_B 变化曲线')
+# plt.xlabel('Step')
+# plt.ylabel('Angle (rad)')
+# plt.grid(True)
+# plt.legend()
+
+# plt.tight_layout()
 
 # 3. 画出轨迹图 (Matplotlib 后处理)
 print("正在绘制轨迹图...")
@@ -114,7 +136,6 @@ for i in range(9):
     plt.scatter(xs[-1], ys[-1], c=color, s=100)
 
 # 画出障碍物 (方便分析避障效果)
-# 注意：这里我们只能画出大概位置，因为PyBullet获取障碍物形状比较麻烦
 # 假设我们知道环境里的障碍物列表 env.obstacles
 if hasattr(env, 'obstacles'):
     for obs_id in env.obstacles:
