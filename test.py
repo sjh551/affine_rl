@@ -8,11 +8,11 @@ from pybullet_env import FormationPyBulletEnv
 
 # 1. 加载环境和模型
 # 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
 # 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
 try:
-    model = PPO.load("ppo2_stage1_nav", env=env)
-    # model = PPO.load("ppo2_final_leader", env=env)
+    # model = PPO.load("ppo2_stage1_nav", env=env)
+    model = PPO.load("ppo2_final_leader", env=env)
     print("✅ 成功加载 RL 模型！")
     # 打印 CUDA 状态和模型所在设备
     try:

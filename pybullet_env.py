@@ -77,7 +77,7 @@ class FormationPyBulletEnv(gym.Env):
         self.steer_indices = [2,0,4,6] # 小车转向关节索引
 
         self.max_vel = 1.0  # 最大线速度 1.5 m/s
-        self.max_omega = 0.2  # 最大角速度 1.0 rad/s
+        self.max_omega = 1.0  # 最大角速度 1.0 rad/s
         self.wheel_radius = 0.09  # 轮半径，m
         self.half_horizon = 0.25 # 水平的一半长
         self.half_vertical = 0.19 # 垂直的一半
@@ -805,7 +805,7 @@ class FormationPyBulletEnv(gym.Env):
         self.obstacles = []
         # 专门存障碍物的静态 2D 坐标
         self.static_obs_positions = []
-        config_id = 3#np.random.randint(0, 4) 
+        config_id = 4# np.random.randint(0, 4) 
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)
