@@ -55,6 +55,35 @@ def get_topology():
     return edges
 
 
+def get_subgraph_config():
+    original_g_nom = get_nominal_configuration()
+    original_edges = get_topology()
+
+    # 你的映射字典 {新索引: 旧索引}
+    leader_follower_dict = {
+        0: 0, # 新Leader 1 -> 原 g1
+        1: 4, # 新Leader 2 -> 原 g5
+        2: 5, # 新Follower 1 -> 原 g6
+        3: 6  # 新Follower 2 -> 原 g7
+    }
+
+    # 1. 提取并生成新的 g_nom
+    new_g_nom = np.zeros((4, 3))
+    for new_idx, old_idx in leader_follower_dict.items():
+        new_g_nom[new_idx] = original_g_nom[old_idx]
+
+    # 2. 构建反向映射 {旧索引: 新索引}，用于更新边
+    reverse_dict = {v: k for k, v in leader_follower_dict.items()}
+
+    # 3. 提取并映射新的 edges
+    new_edges = []
+    for u, v in original_edges:
+        # 只有当边的两个端点都在我们的子集里，才保留这条边
+        if u in reverse_dict and v in reverse_dict:
+            new_edges.append((reverse_dict[u], reverse_dict[v]))
+
+    return new_g_nom, new_edges
+
 # ==========================================
 # 3. 核心数学工具: W 矩阵计算
 # 来源: Eq. (13) 和 (14) 
@@ -87,6 +116,7 @@ def compute_W_matrix(g_nom_i, g_nom_j, g_nom_k, theta=0):
     # Theta = diag(R(theta)^T, 1) -> 文中定义的是 R(theta)^T 在左上角
     # 注意：Eq. 13 中 定义的是 Theta^T 在最后乘，这里我们先构造 Theta
     Theta = np.eye(3)
+
     Theta[:2, :2] = R_theta.T  # 注意这里是转置
 
     # 3. 构造 w_jk (小写 w) - 包含投影和缩放因子
@@ -114,12 +144,56 @@ def compute_W_matrix(g_nom_i, g_nom_j, g_nom_k, theta=0):
     
     return W_jk, W_ki
 
+# ==========================================
+# 新增：2 Leader + 2 Follower 正方形测试拓扑
+# ==========================================
+
+def get_square_configuration():
+    """
+    返回旋转45度的正方形配置。
+    旋转是为了保证任意两个有连接的智能体，
+    其 X 方向和 Y 方向的坐标差都不为 0 (避开拉普拉斯矩阵奇异陷阱)
+    """
+    y = 1.0
+    x = 3 * y
+    g_nom = np.array([
+        [ x,  y,  0.0],       # 0: Leader 1 (顶点)
+        [ y,  -x,  np.pi/2],   # 1: Leader 2 (右点)
+        [-y,  x, -np.pi/2],   # 2: Follower 1 (左点)
+        [ -x, -y,  np.pi]      # 3: Follower 2 (底点)
+    ])
+    # c, s = np.cos(np.pi/3), np.sin(np.pi/3)
+    # R = np.zeros((3,3))
+    # R[:2,:2] = np.array([
+    #     [c, -s], 
+    #     [s, c]
+    # ]) 
+    # R[2,2] = 1
+    # g_nom = (R @ g_nom.T).T
+    return g_nom
+
+def get_square_topology():
+    """
+    构成一个长度为 2 的 DEP (Dual-Entry Path)。
+    两个入口是 Leader (0和1)，内部节点是 Follower (2和3)。
+    双向通信路径: Leader1(0) <-> Follower1(2) <-> Follower2(3) <-> Leader2(1)
+    """
+    edges = [
+        (0, 2),
+        (2, 3),
+        (3, 1)
+    ]
+    return edges
+
+
+
 # === 测试代码 ===
 if __name__ == "__main__":
-    g_nom = get_nominal_configuration()
+    g_nom, edges = get_subgraph_config()
     
     print("标称构型形状:", g_nom.shape)
     print("Agent 1 (Leader) 状态:", g_nom[0])
+    print("edges",edges)
     
     # 测试一下 Fig. 6 的例子数据 (用于验证函数正确性)
     # g_i=[-2,1,pi/2], g_j=[1.5,0.5,pi/4], g_k=[0,0,0]

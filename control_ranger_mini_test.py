@@ -49,57 +49,48 @@ def _drive_robot(v_x, v_y, w):
             continue
             
         ideal_angle = np.arctan2(wheel_vy, wheel_vx)
-        ideal_angle = -ideal_angle # 修正 URDF Z 轴反向
-        
-        # 将基准角度归一化到 [-pi, pi] 之间
-        ideal_angle = (ideal_angle + np.pi) % (2 * np.pi) - np.pi
+        cmd_angle = -ideal_angle # 修正 URDF Z 轴反向
         ideal_speed = speed_2d / R
         
-        # ===================================================
-        # 核心优化 1：生成两个等效的物理状态
-        # ===================================================
-        # 状态 1：车头朝前走
-        state1_angle = ideal_angle
-        state1_speed = ideal_speed
+        current_angle = current_joint_states[i][0]
         
-        # 状态 2：车头朝后退 (角度转 180 度，速度取反)
-        if ideal_angle > 0:
-            state2_angle = ideal_angle - np.pi
+        # =================================================
+        # 核心优化：全向轮的双态物理等效计算
+        # =================================================
+        # 状态1：正向驱动
+        angle1 = cmd_angle
+        speed1 = ideal_speed
+        
+        # 状态2：反向驱动 (轮子掉转 180 度，速度给负数)
+        if angle1 > 0:
+            angle2 = angle1 - np.pi
         else:
-            state2_angle = ideal_angle + np.pi
-        state2_speed = -ideal_speed
+            angle2 = angle1 + np.pi
+        speed2 = -ideal_speed
         
-        # ===================================================
-        # 核心优化 2：安全过滤与最短路径优选
-        # ===================================================
-        # 过滤出不会撞到 URDF 物理限位 [-2.1, 2.1] 的状态
-        # 设定 1.9 为安全裕度
-        valid_states = []
-        if abs(state1_angle) <= 1.9:
-            valid_states.append((state1_angle, state1_speed))
-        if abs(state2_angle) <= 1.9:
-            valid_states.append((state2_angle, state2_speed))
+        # 过滤：只保留满足 URDF 物理限位 [-2.1, 2.1] 的合法状态
+        valid_configs = []
+        limit = 2.1 
+        if -limit <= angle1 <= limit:
+            valid_configs.append((angle1, speed1))
+        if -limit <= angle2 <= limit:
+            valid_configs.append((angle2, speed2))
             
-        # 从安全的选项中，挑出一个离当前轮子角度最近的
-        best_angle = current_angle
-        best_speed = 0.0
-        min_diff = float('inf')
-        
-        for ang, spd in valid_states:
-            diff = abs(ang - current_angle)
-            if diff < min_diff:
-                min_diff = diff
-                best_angle = ang
-                best_speed = spd
-                
-        # ===================================================
-        # 核心优化 3：离合器防抖，角度不到位不给油门
-        # ===================================================
-        speed_penalty = max(0, np.cos(min_diff))
-        best_speed *= speed_penalty
+        # 决策：选择离当前轮子物理角度最近的那个状态 (完美杀死抖动！)
+        if len(valid_configs) > 0:
+            best_config = min(valid_configs, key=lambda x: abs(x[0] - current_angle))
+            best_angle, best_speed = best_config
+        else:
+            # 数学托底：因为 angle1 和 angle2 必定相差 3.14，总有一个在 [-2.1, 2.1] 的 4.2 跨度内。
+            best_angle, best_speed = current_angle, 0.0
+            
+        # 离合器防抖保护
+        angle_diff = abs(best_angle - current_angle)
+        speed_penalty = max(0, np.cos(angle_diff))
+        final_speed = best_speed * speed_penalty
         
         target_steering_angles.append(best_angle)
-        target_wheel_speeds.append(best_speed)
+        target_wheel_speeds.append(final_speed)
         
     # 3. 发送指令
     p.setJointMotorControlArray(

@@ -12,12 +12,12 @@ from collections import deque
 import os
 import shutil
 """
-目前添加了平衡碰撞惩罚和其他惩罚，没有进行深入修改
+因为不需要考虑姿态，不需要角速度，直接角速度输出为0，同时到时候可能要用，直接存在这里
+
 """
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
-                 k_shape_err = 0.05, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
-                 k_repulsion_base = 5.0):
+                 k_shape_err = 0.05, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
         super(FormationPyBulletEnv, self).__init__()
         
         self.k_accel_angular = k_accel_angular
@@ -28,7 +28,6 @@ class FormationPyBulletEnv(gym.Env):
         self.k_smooth_linear = k_smooth_linear
         self.k_omega_limit = k_omega_limit
         self.k_path_cost = k_path_cost
-        self.k_repulsion_base = k_repulsion_base   # 势场排斥力基数
 
         # --- 1. PyBullet 初始化配置 ---
         self.render_mode = render_mode
@@ -85,8 +84,6 @@ class FormationPyBulletEnv(gym.Env):
         self.wheel_radius = 0.09  # 轮半径，m
         self.half_horizon = 0.25 # 水平的一半长
         self.half_vertical = 0.19 # 垂直的一半
-
-        self.danger_margin = 1.2 # 小车离障碍物的最小安全距离
 
         self.safe_margin = 0.7 # 设定的agent之间的警戒距离
         self.obstacles = []
@@ -228,7 +225,7 @@ class FormationPyBulletEnv(gym.Env):
         self.ep_rew_collision = 0.0  # 碰撞扣分
         self.ep_rew_time = 0.0       # 时间扣分
         self.ep_rew_smooth = 0.0     # 平滑度得分
-        obs,_,_ = self._get_obs(center_pos)
+        obs = self._get_obs(center_pos)
 
         self.is_frame_locked = False
         self.locked_target_yaw = 0.0
@@ -283,8 +280,8 @@ class FormationPyBulletEnv(gym.Env):
             
         # --- 5. 获取状态与计算奖励 ---
         center_pos = self._get_center_pos()
-        obs, min_dist_A, min_dist_B = self._get_obs(center_pos)
-        reward, reward_info = self._compute_reward(center_pos,action,action_diff, min_dist_A, min_dist_B)
+        obs = self._get_obs(center_pos)
+        reward, reward_info = self._compute_reward(center_pos,action,action_diff)
 
         # 累加这一步的各项得分
         self.ep_rew_progress += reward_info['r_progress']
@@ -509,12 +506,7 @@ class FormationPyBulletEnv(gym.Env):
 
         # 分别获取 A, B 身边的障碍物特征
         lidar_A = self._get_lidar(pA, target_yaw, self.n_lidar_rays, self.lidar_range)
-        min_dist_A = (1 - max(lidar_A)) * self.lidar_range  # 离A最近地距离
-        # print(lidar_A)
         lidar_B = self._get_lidar(pB, target_yaw, self.n_lidar_rays, self.lidar_range)
-        min_dist_B = (1 - max(lidar_B)) * self.lidar_range  # 离B最近地距离
-
-
         # append 会自动把最老的一帧挤出去 (因为设置了 maxlen=3)
         self.lidar_buffer_A.append(lidar_A)
         self.lidar_buffer_B.append(lidar_B)
@@ -555,14 +547,13 @@ class FormationPyBulletEnv(gym.Env):
             "lidar_A": stacked_lidar_A,
             "lidar_B": stacked_lidar_B
         }
-        return obs, min_dist_A, min_dist_B
+        return obs
     
-    def _compute_reward(self, center_pos, action, action_diff,min_dist_A, min_dist_B):
-        
+    def _compute_reward(self, center_pos, action, action_diff):
         reward = 0
         done = False
         reason = ""
-        # print(f'min_dist_A:{min_dist_A}, min_dist_B:{min_dist_B}')
+
         # --- 1. 进度奖励 ---
         vec_to_goal = self.target_pos[:2] - center_pos[:2]
         dist_to_goal = np.linalg.norm(vec_to_goal)
@@ -594,8 +585,6 @@ class FormationPyBulletEnv(gym.Env):
         # 4. 获取所有机器人的 2D 位置
         all_pos = [np.array(p.getBasePositionAndOrientation(rid)[0][:2]) for rid in self.robot_ids]
 
-        weight_safe_A = 1.0 / (1.0 + np.exp(-10 * (min_dist_A - self.danger_margin)))
-        weight_safe_B = 1.0 / (1.0 + np.exp(-10 * (min_dist_B - self.danger_margin)))
 
         # =========================================================
         # [1] 时间与进度奖励 (Time & Progress)
@@ -613,13 +602,12 @@ class FormationPyBulletEnv(gym.Env):
         # =========================================================
         r_shape = 0.0
         
-
         # A. 速度朝向一致性 (距离目标较远时鼓励朝向目标)
         if dist_to_goal > 2.0:
-            if speed_A > 0.1:  # 只有当最小距离大于安全距离的时候才计算这个奖励
-                r_shape -= weight_safe_A * self.k_vel_align * (1.0 - np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal))
+            if speed_A > 0.1:
+                r_shape -= self.k_vel_align * (1.0 - np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal))
             if speed_B > 0.1:
-                r_shape -= weight_safe_B * self.k_vel_align * (1.0 - np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal))
+                r_shape -= self.k_vel_align * (1.0 - np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal))
         # print(r_shape)
         # B. 奇异性避免与通信断连
         if dist_AB < self.safe_margin + 0.2:
@@ -642,15 +630,10 @@ class FormationPyBulletEnv(gym.Env):
         dvB_linear = np.linalg.norm(action_diff[3:5])
         dwA = abs(action_diff[2]) 
         dwB = abs(action_diff[5])
-
-        r_smooth -= weight_safe_B * self.k_smooth_linear * dvA_linear
-        r_smooth -= weight_safe_B * self.k_accel_angular * dwA
-        r_smooth -= weight_safe_B * self.k_omega_limit * abs(action[2])
-
-        r_smooth -= weight_safe_B * self.k_smooth_linear * dvB_linear
-        r_smooth -= weight_safe_B * self.k_accel_angular * dwB
-        r_smooth -= weight_safe_B * self.k_omega_limit * abs(action[5])
-
+        
+        r_smooth -= self.k_smooth_linear * (dvA_linear + dvB_linear)
+        r_smooth -= self.k_accel_angular * (dwA + dwB)
+        r_smooth -= self.k_omega_limit * (abs(action[2]) + abs(action[5]))
         # print(self.k_omega_limit * (abs(action[2]) + abs(action[5])))
 
         # B. 路径横向偏差惩罚 (Cross Track Error)
@@ -666,10 +649,10 @@ class FormationPyBulletEnv(gym.Env):
         # =========================================================
         r_collision = 0.0
         
-        k_wall_crash = 100.0      # 撞墙惩罚
-        k_team_crash = 100.0      # 互撞惩罚
-        k_obs_crash = 100.0       # 撞障碍物惩罚
-        
+        k_wall_crash = 50.0      # 撞墙惩罚
+        k_team_crash = 50.0      # 互撞惩罚
+        k_obs_crash = 50.0       # 撞障碍物惩罚
+        k_repulsion_base = 3.0   # 势场排斥力基数
         
         # 预先推算 Followers 估计位置 (用于避障预警)
         estimated_team_positions = []
@@ -704,15 +687,15 @@ class FormationPyBulletEnv(gym.Env):
             for est_pos in estimated_team_positions: 
                 for o_pos_2d in self.static_obs_positions:
                     d = np.linalg.norm(o_pos_2d - est_pos)
-                    if 0.9 <= d <= self.danger_margin:
-                        r_collision -= (self.k_repulsion_base / d)
+                    if 0.9 <= d < 1.2:
+                        r_collision -= (k_repulsion_base / d  - k_repulsion_base / 1.2)
             
             # 2. 实际位置碰撞与斥力
             for i, r_pos in enumerate(all_pos):
                 for o_pos_2d in self.static_obs_positions:
                     d = np.linalg.norm(o_pos_2d - r_pos)
-                    if 0.9 <= d <= self.danger_margin:
-                        r_collision -= (self.k_repulsion_base / d)
+                    if 0.9 <= d < 1.2:
+                        r_collision -= (k_repulsion_base / d  - k_repulsion_base / 1.2)
                     elif d < 0.9:
                         r_collision -= k_obs_crash
                         done = True
@@ -739,7 +722,6 @@ class FormationPyBulletEnv(gym.Env):
         # [6] 汇总与返回
         # =========================================================
         r_smooth = 0.1 * r_smooth
-        # print(r_collision)
         reward = r_progress + r_shape + r_collision + r_time + r_smooth
 
         if done and reason == "Success":
@@ -826,7 +808,7 @@ class FormationPyBulletEnv(gym.Env):
         self.obstacles = []
         # 专门存障碍物的静态 2D 坐标
         self.static_obs_positions = []
-        config_id = np.random.randint(0, 3) 
+        config_id = 4# np.random.randint(0, 4) 
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)

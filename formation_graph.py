@@ -17,44 +17,47 @@ class FormationGraph:
         
     def _get_triplets(self):
         """
-        根据 Fig. 2 手动定义 DEP 三元组 (i, j, k)
-        其中 k 是中间节点 (Inner Agent)，i 和 j 是 k 的两个邻居。
-        约束方程来源于 k 夹在 i 和 j 之间。
-        
-        索引映射 (Paper g1..g9 -> Python 0..8):
-        Path 1 (Red): 0(g1) - 4(g5) - 3(g4) - 2(g3) - 1(g2)
-        Path 2 (Blue): 0(g1) - 6(g7) - 5(g6) - 4(g5)
-        Path 3 (Yel): 2(g3) - 7(g8) - 8(g9) - 1(g2)
+        根据节点数量动态返回 DEP 三元组 (i, j, k)
+        其中 k 是中间节点 (Follower)，i 和 j 是它的两个邻居。
         """
         triplets = []
         
-        # === Path 1 (Red) ===
-        # 原始链条: 0-4-3-2-1
-        # Center 4(g5): neighbors 0(g1), 3(g4) -> (0, 3, 4) [0<3, OK]
-        triplets.append((0, 3, 4)) 
-        
-        # Center 3(g4): neighbors 4(g5), 2(g3) -> (2, 4, 3) [Sorted 2<4]
-        triplets.append((2, 4, 3)) 
-        
-        # Center 2(g3): neighbors 3(g4), 1(g2) -> (1, 3, 2) [Sorted 1<3]
-        triplets.append((1, 3, 2)) 
-        
-        # === Path 2 (Blue) ===
-        # 原始链条: 0-6-5-4
-        # Center 6(g7): neighbors 0(g1), 5(g6) -> (0, 5, 6) [0<5, OK]
-        triplets.append((0, 5, 6)) 
-        
-        # Center 5(g6): neighbors 6(g7), 4(g5) -> (4, 6, 5) [Sorted 4<6]
-        triplets.append((4, 6, 5)) 
-        
-        # === Path 3 (Yellow) ===
-        # 原始链条: 2-7-8-1
-        # Center 7(g8): neighbors 2(g3), 8(g9) -> (2, 8, 7) [2<8, OK]
-        triplets.append((2, 8, 7)) 
-        
-        # Center 8(g9): neighbors 7(g8), 1(g2) -> (1, 7, 8) [Sorted 1<7]
-        triplets.append((1, 7, 8)) 
-        
+        if self.n_agents == 4:
+            # ==========================================
+            # 2 Leader + 2 Follower 的基础正方形拓扑
+            # 路径串联: Leader1(0) <-> Follower1(2) <-> Follower2(3) <-> Leader2(1)
+            # ==========================================
+            
+            # 1. 对于 Follower1 (索引 k=2): 
+            # 它的两个邻居是 Leader1(0) 和 Follower2(3)。
+            # 按照 (i, j, k) 且 i < j 的习惯：
+            triplets.append((0, 3, 2)) 
+            
+            # 2. 对于 Follower2 (索引 k=3): 
+            # 它的两个邻居是 Follower1(2) 和 Leader2(1)。
+            # 按照 (i, j, k) 且 i < j 的习惯：
+            triplets.append((1, 2, 3)) 
+            
+        elif self.n_agents == 9:
+            # ==========================================
+            # 原有的 9 节点复杂拓扑
+            # ==========================================
+            # === Path 1 (Red) ===
+            triplets.append((0, 3, 4)) 
+            triplets.append((2, 4, 3)) 
+            triplets.append((1, 3, 2)) 
+            
+            # === Path 2 (Blue) ===
+            triplets.append((0, 5, 6)) 
+            triplets.append((4, 6, 5)) 
+            
+            # === Path 3 (Yellow) ===
+            triplets.append((2, 8, 7)) 
+            triplets.append((1, 7, 8)) 
+            
+        else:
+            raise ValueError(f"未定义的拓扑结构！当前智能体数量为 {self.n_agents}")
+            
         return triplets
 
 

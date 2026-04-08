@@ -84,9 +84,9 @@ while not done:
 
 # 关闭物理引擎
 env.close()
-yawA = env.delta_yaw_his_A
-yawB = env.delta_yaw_his_B
-steps = np.arange(len(yawA))
+# yawA = env.followerA_err
+# yawB = env.followerB_err
+# steps = np.arange(len(yawA))
 
 # plt.figure(figsize=(12,5))
 

@@ -28,7 +28,7 @@ START_FROM_SCRATCH = False
 LOAD_MODEL_NAME = "ppo2_stage1_nav" 
 
 # 3. 训练长度
-TIMESTEPS_STAGE1 = 1000000
+TIMESTEPS_STAGE1 = 200000
 TIMESTEPS_STAGE2 = 1000000
 # ======================================================================
 

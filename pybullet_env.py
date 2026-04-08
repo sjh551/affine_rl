@@ -6,7 +6,7 @@ import pybullet_data
 import time
 import math
 from formation_graph import FormationGraph
-from formation_utils import get_nominal_configuration
+from formation_utils import get_square_configuration, get_square_topology
 import itertools
 from collections import deque
 import os
@@ -14,16 +14,16 @@ import shutil
 
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
-                 k_shape_err = 0.05, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
+                 k_shape_err = 0.03, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
         super(FormationPyBulletEnv, self).__init__()
         
-        self.k_accel_angular = k_accel_angular
+        # self.k_accel_angular = k_accel_angular
         self.k_vel_align = k_vel_align
         self.k_progress = k_progress
         self.k_shape_err = k_shape_err 
         self.k_disconnect = k_disconnect
         self.k_smooth_linear = k_smooth_linear
-        self.k_omega_limit = k_omega_limit
+        # self.k_omega_limit = k_omega_limit
         self.k_path_cost = k_path_cost
 
         # --- 1. PyBullet 初始化配置 ---
@@ -37,18 +37,19 @@ class FormationPyBulletEnv(gym.Env):
         
         # --- 参数配置 ---
         self.n_leaders = 2
-        self.n_followers = 0
+        self.n_followers = 2
         self.num_robots = self.n_leaders + self.n_followers 
         self.robot_ids = []
         
+
         # --- 初始化标称构型和权重 ---
-        self.g_nom = get_nominal_configuration()
+        self.g_nom, self.edges = get_square_configuration(), get_square_topology()
         # 2. 构建全局大矩阵并进行 2D 降维分块
         self._init_global_matrices()
 
         # --- 动作空间 (6维) ---
-        # [LeaderA_Vx, LeaderA_Vy, LeaderA_omega, LeaderB_Vx, LeaderB_Vy, LeaderB_omega]
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(6,), dtype=np.float32)
+        # [LeaderA_Vx, LeaderA_Vy, LeaderA_omega, LeaderB_Vx, LeaderB_Vy, LeaderB_omega]  不需要角速度，角速度可以直接为0
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
         
         self.n_nearest_obs = 16 # 最近的12个障碍物 + 四面墙 = 16 个观测点
         self.n_lidar_rays = 180 # 雷达一圈多少线
@@ -58,7 +59,7 @@ class FormationPyBulletEnv(gym.Env):
         self.lidar_buffer_B = deque(maxlen=3)
 
         # 运动学特征 (距离, 相对向量, 速度, 姿态) 
-        kinematics_dim = 1 + 4 + 4 + 6 + 2 + 6 # 6 表示sin(),cos(),以及当前的角速度w x 2，-1 表示我们把目标的 Y 轴坐标去掉了 + 2 表示期望向量 + 上一时刻的动作
+        kinematics_dim = 1 + 4 + 4 + 6 + 2 + 4 # 6 表示sin(),cos(),以及当前的角速度w x 2，-1 表示我们把目标的 Y 轴坐标去掉了 + 2 表示期望向量 + 上一时刻的动作
 
         self.observation_space = spaces.Dict({
             # 基础运动学状态 (1D 向量)
@@ -72,7 +73,8 @@ class FormationPyBulletEnv(gym.Env):
 
         self.target_pos = np.array([8.5, 0, 0])
         # 定义 Leader A 相对于 Leader B 的完美相对向量 [-4, -2, np.pi/8],   # g1 (Leader) [ 2,  4, -np.pi/4],  # g2 (Leader)，A在B的下方，、
-        self.nominal_vec = np.array([-6.0, -6.0, 3 * np.pi/8])
+        self.nominal_vec = np.array([(self.g_nom[0] - self.g_nom[1])[0], (self.g_nom[0] - self.g_nom[1])[1], 3 * np.pi/8])
+        # print(self.nominal_vec)
         self.wheel_indices = [3,1,5,7] # 小车轮子关节索引
         self.steer_indices = [2,0,4,6] # 小车转向关节索引
 
@@ -92,14 +94,17 @@ class FormationPyBulletEnv(gym.Env):
         # 用于可视化的线段ID
         self.debug_line_ids = []
 
-        self.delta_yaw_his_A = []
-        self.delta_yaw_his_B = []
+        self.followerA_err = []
+        self.followerB_err = []
+
+        if not hasattr(self, 'last_follower_vels'):
+            self.last_follower_vels = [np.zeros(3) for _ in range(self.n_followers)]
 
     def _init_global_matrices(self):
         """
         构建 9 个智能体的全局拉普拉斯矩阵，并剔除角度维度，进行分块
         """
-        # 1. 构建 27x27 的矩阵 M
+        # 1. 构建矩阵 M
         fg = FormationGraph(self.g_nom)
         self.M_3d = fg.build_laplacian(theta=0)
         
@@ -234,18 +239,28 @@ class FormationPyBulletEnv(gym.Env):
         # 当前动作为小车目标坐标系下的动作，不是小车自身坐标系的动作
         self.current_step += 1
 
+        current_max_vel = self.max_vel
+        center_pos = self._get_center_pos()
+        vec_to_goal = self.target_pos[:2] - center_pos[:2]
+        dist_to_goal = np.linalg.norm(vec_to_goal)
+
+        if dist_to_goal < 5.0:
+            # 计算衰减系数，距离越近，系数越小，但不低于保底速度比例
+            decay_factor = max((dist_to_goal / 5.0), (0.2 / self.max_vel))
+            current_max_vel = self.max_vel * decay_factor
+
         action_diff = action - self.last_action
         self.last_action = action.copy()
         
         # 提取 Leader A 的线速度和角速度
-        vAx = action[0] * self.max_vel
-        vAy = action[1] * self.max_vel
-        wA = action[2] * self.max_omega
+        vAx = action[0] * current_max_vel
+        vAy = action[1] * current_max_vel
+        wA = 0.0
 
         # 提取 Leader B 的线速度和角速度
-        vBx = action[3] * self.max_vel
-        vBy = action[4] * self.max_vel
-        wB = action[5] * self.max_omega
+        vBx = action[2] * current_max_vel
+        vBy = action[3] * current_max_vel
+        wB = 0.0
 
         # print(abs(wA) + abs(wB))
 
@@ -276,7 +291,6 @@ class FormationPyBulletEnv(gym.Env):
             time.sleep(0.01)
             
         # --- 5. 获取状态与计算奖励 ---
-        center_pos = self._get_center_pos()
         obs = self._get_obs(center_pos)
         reward, reward_info = self._compute_reward(center_pos,action,action_diff)
 
@@ -295,6 +309,7 @@ class FormationPyBulletEnv(gym.Env):
             info['ep_rew_collision'] = self.ep_rew_collision
             info['ep_rew_smooth'] = self.ep_rew_smooth
             info['ep_rew_time'] = self.ep_rew_time
+            info['reason'] = reward_info.get('reason', 'Unknown')
 
         # 更新上一帧速度
         for i, rid in enumerate(self.robot_ids):
@@ -317,7 +332,7 @@ class FormationPyBulletEnv(gym.Env):
     # ============================================================
     def _control_follower(self, states):
         """
-        使用全局 3D 矩阵一次性计算 7 个跟随者的目标速度
+        使用全局 3D 矩阵一次性计算跟随者的目标速度
         """
         # 1. 提取实时的全局状态 (x, y, yaw)
         # p_flat shape: (27,), v_l_flat shape: (6,)
@@ -360,7 +375,7 @@ class FormationPyBulletEnv(gym.Env):
             robot_id = self.robot_ids[idx + 2]
             world_vx = follower_vels[idx][0] # 期望绝对 X 速度
             world_vy = follower_vels[idx][1] # 期望绝对 Y 速度
-            w = follower_vels[idx][2]        # 期望角速度
+            # w = follower_vels[idx][2]        # 期望角速度
             
             # 直接从 states 字典获取 yaw
             yaw = states[idx + 2]['yaw']
@@ -368,13 +383,15 @@ class FormationPyBulletEnv(gym.Env):
             # 将世界系平移速度转化为全向小车体坐标系的 (vx, vy)
             v_body_x = world_vx * np.cos(yaw) + world_vy * np.sin(yaw)
             v_body_y = -world_vx * np.sin(yaw) + world_vy * np.cos(yaw)
+            # if idx == 0:
+            #     print(f"angle:{np.arctan2(v_body_y,v_body_x)}")
             
             # 调用底层舵轮解算函数
-            self._drive_robot(robot_id, v_body_x, v_body_y, w)
+            self._drive_robot(robot_id, v_body_x, v_body_y, 0)
     
     def _drive_robot(self, robot_id, v_x, v_y, w):
         """
-        Swerve Drive 运动学逆解 + 终极物理防抖抗死锁
+        接收输入为小车体坐标系下的速度
         """
         R = 0.09  
         wheel_positions = [
@@ -393,7 +410,7 @@ class FormationPyBulletEnv(gym.Env):
             wheel_vy = v_y + w * wx
             
             speed_2d = np.hypot(wheel_vx, wheel_vy)
-            if speed_2d < 1e-3:
+            if speed_2d < 2e-2:
                 # 速度太小时保持当前角度，防止原地抽搐
                 current_angle = current_joint_states[i][0]  
                 target_steering_angles.append(current_angle) 
@@ -404,31 +421,45 @@ class FormationPyBulletEnv(gym.Env):
             cmd_angle = -ideal_angle # 修正 URDF Z 轴反向
             ideal_speed = speed_2d / R
             
-            # ===================================================
-            # 核心优化 1：绝对空间映射限制
-            # 强制把目标角度压缩在 [-90度, 90度] 之间。
-            # 这样绝对不会触碰 URDF [-2.1, 2.1] 的物理限位！
-            # ===================================================
-            if cmd_angle > np.pi / 2:
-                cmd_angle -= np.pi
-                ideal_speed = -ideal_speed
-            elif cmd_angle < -np.pi / 2:
-                cmd_angle += np.pi
-                ideal_speed = -ideal_speed
-                
-            # 获取当前角度
             current_angle = current_joint_states[i][0]
             
-            # ===================================================
-            # 核心优化 2：基于绝对误差的离合器防抖
-            # 如果轮子还没转到位，直接切断动力，防止侧向拖拽引发死锁
-            # ===================================================
-            diff = abs(cmd_angle - current_angle)
-            speed_penalty = max(0, np.cos(diff))
-            ideal_speed *= speed_penalty
+            # =================================================
+            # 核心优化：全向轮的双态物理等效计算
+            # =================================================
+            # 状态1：正向驱动
+            angle1 = cmd_angle
+            speed1 = ideal_speed
             
-            target_steering_angles.append(cmd_angle)
-            target_wheel_speeds.append(ideal_speed)
+            # 状态2：反向驱动 (轮子掉转 180 度，速度给负数)
+            if angle1 > 0:
+                angle2 = angle1 - np.pi
+            else:
+                angle2 = angle1 + np.pi
+            speed2 = -ideal_speed
+            
+            # 过滤：只保留满足 URDF 物理限位 [-2.1, 2.1] 的合法状态
+            valid_configs = []
+            limit = 2.1 
+            if -limit <= angle1 <= limit:
+                valid_configs.append((angle1, speed1))
+            if -limit <= angle2 <= limit:
+                valid_configs.append((angle2, speed2))
+                
+            # 决策：选择离当前轮子物理角度最近的那个状态 (完美杀死抖动！)
+            if len(valid_configs) > 0:
+                best_config = min(valid_configs, key=lambda x: abs(x[0] - current_angle))
+                best_angle, best_speed = best_config
+            else:
+                # 数学托底：因为 angle1 和 angle2 必定相差 3.14，总有一个在 [-2.1, 2.1] 的 4.2 跨度内。
+                best_angle, best_speed = current_angle, 0.0
+                
+            # 离合器防抖保护
+            angle_diff = abs(best_angle - current_angle)
+            speed_penalty = max(0, np.cos(angle_diff))
+            final_speed = best_speed * speed_penalty
+            
+            target_steering_angles.append(best_angle)
+            target_wheel_speeds.append(final_speed)
             
         # 3. 发送指令
         p.setJointMotorControlArray(
@@ -470,9 +501,6 @@ class FormationPyBulletEnv(gym.Env):
         pB = np.array(pos_B[:2]) # 转换为 numpy 数组 (只取 x, y)
         vB = np.array(vel_B[:2])
         delta_yaw_B = target_yaw - yaw_B
-        # debug 用的
-        # self.delta_yaw_his_A.append(delta_yaw_A)
-        # self.delta_yaw_his_B.append(delta_yaw_B)
 
         self._cosA = np.cos(delta_yaw_A)
         self._sinA = np.sin(delta_yaw_A)
@@ -534,8 +562,8 @@ class FormationPyBulletEnv(gym.Env):
             self._sinB, self._cosB, w_B,
 
             # 让网络拥有肌肉记忆
-            self.last_action[0], self.last_action[1], self.last_action[2], 
-            self.last_action[3], self.last_action[4], self.last_action[5]
+            self.last_action[0], self.last_action[1], 
+            self.last_action[2], self.last_action[3]
         
         ],dtype=np.float32)
         # 返回字典结构
@@ -557,7 +585,6 @@ class FormationPyBulletEnv(gym.Env):
         dir_to_goal = vec_to_goal / (dist_to_goal + 1e-8) # 加 1e-8 防止除以 0
 
         if not hasattr(self, 'last_center_dist'): self.last_center_dist = dist_to_goal
-
 
         pos_A, quat_A = p.getBasePositionAndOrientation(self.robot_ids[0])
         _,_,yaw_A = p.getEulerFromQuaternion(quat_A)
@@ -589,7 +616,7 @@ class FormationPyBulletEnv(gym.Env):
         r_time = -0.1  # 每步固定的时间惩罚
 
         k_progress = 10.0  # 进度奖励系数
-        
+
         r_progress = (self.last_center_dist - dist_to_goal) * k_progress
         self.last_center_dist = dist_to_goal
 
@@ -615,6 +642,7 @@ class FormationPyBulletEnv(gym.Env):
         # C. 目标点附近形状约束
         if dist_to_goal < 5.0 and shape_error > 2.0:
             r_shape -= self.k_shape_err * shape_error
+            # print(r_shape)
 
 
         # =========================================================
@@ -624,14 +652,9 @@ class FormationPyBulletEnv(gym.Env):
         
         # A. 动作变化率惩罚 (防抽搐)
         dvA_linear = np.linalg.norm(action_diff[0:2])
-        dvB_linear = np.linalg.norm(action_diff[3:5])
-        dwA = abs(action_diff[2]) 
-        dwB = abs(action_diff[5])
-        
+        dvB_linear = np.linalg.norm(action_diff[2:4])
         r_smooth -= self.k_smooth_linear * (dvA_linear + dvB_linear)
-        r_smooth -= self.k_accel_angular * (dwA + dwB)
-        r_smooth -= self.k_omega_limit * (abs(action[2]) + abs(action[5]))
-        # print(self.k_omega_limit * (abs(action[2]) + abs(action[5])))
+
 
         # B. 路径横向偏差惩罚 (Cross Track Error)
         R_vec = center_pos[:2] - self.start_center[:2]
@@ -649,15 +672,23 @@ class FormationPyBulletEnv(gym.Env):
         k_wall_crash = 50.0      # 撞墙惩罚
         k_team_crash = 50.0      # 互撞惩罚
         k_obs_crash = 50.0       # 撞障碍物惩罚
-        k_repulsion_base = 3.0   # 势场排斥力基数
+        k_repulsion_base = 0.1   # 势场排斥力基数
         
         # 预先推算 Followers 估计位置 (用于避障预警)
-        estimated_team_positions = []
-        if self.n_followers > 0 and self.enable_obstacles:
-            p_leader_flat = np.concatenate([pA_3d, pB_3d])
-            p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_flat
-            for i in range(self.n_followers):
-                estimated_team_positions.append(np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]]))
+        # estimated_team_positions = []
+        # if self.n_followers > 0 and self.enable_obstacles:
+        #     p_leader_flat = np.concatenate([pA_3d, pB_3d])
+        #     p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_flat
+        #     current_A = np.array([p_follower_est_flat[0*3], p_follower_est_flat[0*3 + 1]])
+        #     current_B = np.array([p_follower_est_flat[1*3], p_follower_est_flat[1*3 + 1]])
+        #     err_A = np.linalg.norm(all_pos[2][:2] - current_A)
+        #     err_B = np.linalg.norm(all_pos[3][:2] - current_B)
+        #     # for i in range(self.n_followers):
+        #         # estimated_team_positions.append(np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]]))
+                
+        #     # debug 用的
+        #     self.followerA_err.append(err_A)
+        #     self.followerB_err.append(err_B)
 
         # A. 撞墙检测
         limit_x = self.wall_length - 0.5 - 0.6
@@ -680,26 +711,42 @@ class FormationPyBulletEnv(gym.Env):
 
         # C. 障碍物碰撞与斥力势场
         if self.enable_obstacles and not done:
-            # 1. 估计位置斥力预警
-            for est_pos in estimated_team_positions: 
-                for o_pos_2d in self.static_obs_positions:
-                    d = np.linalg.norm(o_pos_2d - est_pos)
-                    if 0.9 <= d < 1.2:
-                        r_collision -= (k_repulsion_base / d  - k_repulsion_base / 1.2)
+            # crash_threshold = 0.05  # 表面距离小于 5cm 认为撞毁
+            # warn_threshold = 0.35   # 表面距离小于 35cm 开始施加斥力       
+            crash_threshold = 0.05
+            warn_threshold = 0.35
             
-            # 2. 实际位置碰撞与斥力
-            for i, r_pos in enumerate(all_pos):
-                for o_pos_2d in self.static_obs_positions:
-                    d = np.linalg.norm(o_pos_2d - r_pos)
-                    if 0.9 <= d < 1.2:
-                        r_collision -= (k_repulsion_base / d  - k_repulsion_base / 1.2)
-                    elif d < 0.9:
-                        r_collision -= k_obs_crash
-                        done = True
-                        reason = f"Crash_Obstacle (Bot {i})"
-                        break
-                if done: break
-
+            # 遍历所有机器人
+            for i, robot_id in enumerate(self.robot_ids):
+                # 遍历所有障碍物
+                for obs_id in self.obstacles:
+                    
+                    # 查询机器人与该障碍物之间，距离在 warn_threshold 以内的最近点信息
+                    # 如果距离大于 warn_threshold，直接返回空列表
+                    closest_points = p.getClosestPoints(bodyA=robot_id, bodyB=obs_id, distance=warn_threshold)
+                    
+                    if len(closest_points) > 0:
+                        # closest_points 是一个列表，里面可能包含多个接近点的信息
+                        # 返回结果的第 8 个元素 (index 8) 是这两个点之间的直线物理距离
+                        # 我们取出其中最小的距离
+                        min_surface_dist = min([pt[8] for pt in closest_points])
+                        
+                        # --- 1. 致命碰撞判定 ---
+                        if min_surface_dist <= crash_threshold:
+                            r_collision -= k_obs_crash
+                            done = True
+                            reason = f"Crash_Obstacle (Bot {i} hit wall)"
+                            break  # 撞死了就跳出障碍物循环
+                            
+                        # --- 2. 预警斥力判定 ---
+                        elif min_surface_dist < warn_threshold:
+                            # 距离越小（越接近 crash_threshold），斥力越大
+                            # 使用修改后的人工势场公式
+                            r_collision -= k_repulsion_base * (1.0 / max(min_surface_dist, 0.01) - 1.0 / warn_threshold)
+                        # print(min_surface_dist, r_collision, end="\r")
+                if done: 
+                    break # 如果其中一台车撞死了，结束整个回合
+       
 
         # =========================================================
         # [5] 任务终止判定 (Success / Timeout)
@@ -726,6 +773,7 @@ class FormationPyBulletEnv(gym.Env):
 
         reward_info = {
             'done': done,
+            'reason': reason,
             'r_progress': r_progress,
             'r_shape': r_shape,
             'r_collision': r_collision,
@@ -752,11 +800,7 @@ class FormationPyBulletEnv(gym.Env):
             edges = [(0, 1)]
         else:
             # 原有的 9 智能体连线
-            edges = [
-                (0, 4), (4, 3), (3, 2), (2, 1), 
-                (0, 6), (6, 5), (5, 4),         
-                (2, 7), (7, 8), (8, 1)          
-            ]
+            edges = self.edges
             
         for u, v in edges:
             if u < len(points) and v < len(points):
@@ -803,9 +847,7 @@ class FormationPyBulletEnv(gym.Env):
 
     def _generate_obstacles(self):
         self.obstacles = []
-        # 专门存障碍物的静态 2D 坐标
-        self.static_obs_positions = []
-        config_id = 4# np.random.randint(0, 4) 
+        config_id = np.random.randint(0, 5) 
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)
@@ -816,23 +858,97 @@ class FormationPyBulletEnv(gym.Env):
         mid_y_range = self.wall_width - 1.0
 
         if config_id == 0:  # 均匀4排
-            for x in [-4, 0, 4]:
-                pos_list.append([x, 0.6 * self.wall_width, 0.5])
-                pos_list.append([x, 0.2 * self.wall_width, 0.5])
-                pos_list.append([x, -0.2 * self.wall_width, 0.5])
-                pos_list.append([x, -0.6 * self.wall_width, 0.5])
+            for x in [-4, -1.33333333, 1.33333333, 4]:
+                pos_list.append([x, 0, 0.5])
+                pos_list.append([x, 0.5 * self.wall_width, 0.5])
+                pos_list.append([x, -0.5 * self.wall_width, 0.5])
+
 
         elif config_id == 1:
-            gap_half_width = 1.5 # 也就是中间留 3.0 米的缝
-            num_pillars = int(self.wall_width * 1.5) # 密集排列形成一堵实心墙
-            for y in np.linspace(-self.wall_width, self.wall_width, num_pillars):
-                if abs(y) > gap_half_width: 
-                    pos_list.append([0, y, 0.5])
+            # 目标：在 x=0 处建一堵墙，支持多开几个门降低探索难度
+            
+            # --- 在这里自由定义门的位置和大小 ---
+            doors_y = [-5.0, 0.0, 5.0]  # 定义三个门的中心 Y 坐标
+            gap_half_width = 0.8        # 每个门留 1.6 米的宽缝
+            
+            wall_thickness = 1.0
+            wall_height = 1.5
+            wall_x = 0.0                # 墙在 X 轴的位置
+            
+            # 墙体的起始 Y 坐标 (从场地的最右侧边界开始)
+            current_y = -self.wall_width + 0.5
+            
+            # 遍历所有的门，在门与门之间“砌墙”
+            for door_y in doors_y:
+                # 计算当前墙段的终点 (门的下边缘)
+                segment_end_y = door_y - gap_half_width 
+                segment_length = segment_end_y - current_y
+                
+                # 如果墙段长度大于0，则生成这块墙
+                if segment_length > 0:
+                    center_y = current_y + segment_length / 2.0
+                    half_extents = [wall_thickness / 2.0, segment_length / 2.0, wall_height / 2.0]
+                    
+                    v_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=half_extents, rgbaColor=[0.2, 0.2, 0.2, 1])
+                    c_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
+                    
+                    obs_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=c_shape, 
+                                               baseVisualShapeIndex=v_shape, 
+                                               basePosition=[wall_x, center_y, wall_height / 2.0])
+                    self.obstacles.append(obs_id)
+                
+                # 更新 current_y 到门的另一侧上边缘
+                current_y = door_y + gap_half_width
+                
+            # --- 收尾：最后一道门到左侧边界的墙段 ---
+            segment_end_y = self.wall_width - 0.5
+            segment_length = segment_end_y - current_y
+            if segment_length > 0:
+                center_y = current_y + segment_length / 2.0
+                half_extents = [wall_thickness / 2.0, segment_length / 2.0, wall_height / 2.0]
+                
+                v_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=half_extents, rgbaColor=[0.2, 0.2, 0.2, 1])
+                c_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
+                
+                obs_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=c_shape, 
+                                           baseVisualShapeIndex=v_shape, 
+                                           basePosition=[wall_x, center_y, wall_height / 2.0])
+                self.obstacles.append(obs_id)
+            
 
-        elif config_id == 2:     # 只有 y 在 (1.5, 4.5) 和 (-4.5, -1.5) 两个区间可以过
-            for y in np.linspace(-self.wall_width, self.wall_width, int(self.wall_width * 1.5)):
-                if not (1.5 < y < 4.5) and not (-4.5 < y < -1.5):
-                    pos_list.append([0, y, 0.5])
+
+
+        elif config_id == 2:    
+            # ==========================================
+            # 八字形逐渐缩小的袋口 (Funnel / Pocket)
+            # ==========================================
+            # 1. 定义袋口的 X 轴跨度 (假设小车从 X 负半轴往正半轴开)
+            x_start = -5.0       # 袋口的最外端 (宽口)
+            x_end = 3.0          # 袋口的最里端 (窄口)
+            
+            # 2. 定义开口大小 (Y轴的正负一半)
+            y_gap_start = 8.0    # 宽口一半宽度 (总宽 12 米)
+            y_gap_end = 1.2      # 窄口一半宽度 (总宽 2.4 米，极度考验编队收缩)
+            
+            # 3. 定义单侧墙壁的柱子密集程度
+            num_pillars = 10    
+            
+            # 4. 利用线性插值 (Linear Interpolation) 生成两条斜线
+            for i in range(num_pillars):
+                # t 是插值系数，从 0.0 逐渐变到 1.0
+                t = i / (num_pillars - 1)
+                
+                # 计算当前的 X 坐标
+                cx = x_start + t * (x_end - x_start)
+                
+                # 计算当前 X 对应的 Y 边界
+                cy = y_gap_start + t * (y_gap_end - y_gap_start)
+                
+                # 上半边的斜墙 (y > 0)
+                pos_list.append([cx, cy, 0.5])
+                
+                # 下半边的斜墙 (y < 0，对称)
+                pos_list.append([cx, -cy, 0.5])
 
         elif config_id == 3:
             # --- 配置 5：动态泊松盘（稀疏森林） ---
@@ -851,13 +967,13 @@ class FormationPyBulletEnv(gym.Env):
 
         else:
             # --- 配置 5：动态泊松盘（稀疏森林） ---
-            while len(pos_list) < 12: # 生成 12 根柱子
+            while len(pos_list) < 10: # 生成 10 根柱子
                 ox = np.random.uniform(mid_x_min, mid_x_max)
                 oy = np.random.uniform(-mid_y_range, mid_y_range)
                 
                 is_far_enough = True
                 for p_exist in pos_list:
-                    if np.linalg.norm([ox - p_exist[0], oy - p_exist[1]]) < 3.0:
+                    if np.linalg.norm([ox - p_exist[0], oy - p_exist[1]]) < 4.0:
                         is_far_enough = False
                         break
                 
@@ -869,7 +985,6 @@ class FormationPyBulletEnv(gym.Env):
             obs_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=c_shape, 
                                        baseVisualShapeIndex=v_shape, basePosition=pos)
             self.obstacles.append(obs_id)
-            self.static_obs_positions.append(np.array(pos[:2]))
 
     def _get_all_robot_states(self):
         """辅助函数：获取所有机器人的位置和速度，供 Follower 算法使用"""
