@@ -10,6 +10,7 @@ gym
 # --- 强化学习算法库 (含 PyTorch 后端) ---
 torch
 stable-baselines3
+sb3_contrib
 
 # --- 可视化与日志记录 ---
 matplotlib

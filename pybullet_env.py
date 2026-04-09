@@ -14,7 +14,7 @@ import shutil
 
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
-                 k_shape_err = 0.03, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
+                 k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -37,7 +37,7 @@ class FormationPyBulletEnv(gym.Env):
         
         # --- 参数配置 ---
         self.n_leaders = 2
-        self.n_followers = 2
+        self.n_followers = 0
         self.num_robots = self.n_leaders + self.n_followers 
         self.robot_ids = []
         
@@ -53,21 +53,21 @@ class FormationPyBulletEnv(gym.Env):
         
         self.n_nearest_obs = 16 # 最近的12个障碍物 + 四面墙 = 16 个观测点
         self.n_lidar_rays = 180 # 雷达一圈多少线
-        self.lidar_range = 5.0 # 最大长度
+        self.lidar_range = 6.0 # 最大长度
 
-        self.lidar_buffer_A = deque(maxlen=3)
-        self.lidar_buffer_B = deque(maxlen=3)
+        self.lidar_buffer_A = deque(maxlen=1)
+        self.lidar_buffer_B = deque(maxlen=1)
 
         # 运动学特征 (距离, 相对向量, 速度, 姿态) 
-        kinematics_dim = 1 + 4 + 4 + 6 + 2 + 4 # 6 表示sin(),cos(),以及当前的角速度w x 2，-1 表示我们把目标的 Y 轴坐标去掉了 + 2 表示期望向量 + 上一时刻的动作
+        kinematics_dim = 2 + 4 + 4 + 6 + 2 + 4 # 6 表示sin(),cos(),以及当前的角速度w x 2，-1 表示我们把目标的 Y 轴坐标去掉了 + 2 表示期望向量 + 上一时刻的动作
 
         self.observation_space = spaces.Dict({
             # 基础运动学状态 (1D 向量)
             "kinematics": spaces.Box(low=-np.inf, high=np.inf, shape=(kinematics_dim,), dtype=np.float32),
             # 雷达 A 的状态: 3 个通道 (历史帧), 每个通道 180 个数值 
-            "lidar_A": spaces.Box(low=0.0, high=1.0, shape=(3, self.n_lidar_rays), dtype=np.float32),
+            "lidar_A": spaces.Box(low=0.0, high=1.0, shape=(1, self.n_lidar_rays), dtype=np.float32),
             # 雷达 B 的状态
-            "lidar_B": spaces.Box(low=0.0, high=1.0, shape=(3, self.n_lidar_rays), dtype=np.float32)
+            "lidar_B": spaces.Box(low=0.0, high=1.0, shape=(1, self.n_lidar_rays), dtype=np.float32)
         })
         # print(f"Observation space dimension: {obs_dim}")
 
@@ -143,8 +143,13 @@ class FormationPyBulletEnv(gym.Env):
             np.random.uniform(-self.wall_length + 6.0, -self.wall_length + 6.2),
             np.random.uniform(-2.0, 2.0)
         ])
+
         self.L = self.target_pos[:2] - self.start_center[:2]
         self.L_norm = np.linalg.norm(self.L)
+        dir_start_to_goal = self.L / self.L_norm
+        virtual_extension_dist = 4.0 
+        self.virtual_target_pos = self.target_pos[:2] + dir_start_to_goal * virtual_extension_dist  # 把目标点后移
+
 
         # 2. 标称构型加随机位置
         for i in range(self.num_robots):
@@ -201,6 +206,7 @@ class FormationPyBulletEnv(gym.Env):
         self.last_action = np.zeros(self.action_space.shape)
         # 初始化距离记录 (用两车中点计算)
         center_pos = self._get_center_pos()
+
         # print(f"初始中心位置: {center_pos}, 目标位置: {self.target_pos}")
         vec_to_goal = self.target_pos[:2] - center_pos[:2]
         target_yaw = np.arctan2(vec_to_goal[1], vec_to_goal[0])
@@ -239,27 +245,21 @@ class FormationPyBulletEnv(gym.Env):
         # 当前动作为小车目标坐标系下的动作，不是小车自身坐标系的动作
         self.current_step += 1
 
-        current_max_vel = self.max_vel
         center_pos = self._get_center_pos()
-        vec_to_goal = self.target_pos[:2] - center_pos[:2]
-        dist_to_goal = np.linalg.norm(vec_to_goal)
-
-        if dist_to_goal < 5.0:
-            # 计算衰减系数，距离越近，系数越小，但不低于保底速度比例
-            decay_factor = max((dist_to_goal / 5.0), (0.2 / self.max_vel))
-            current_max_vel = self.max_vel * decay_factor
+        # vec_to_goal = self.target_pos[:2] - center_pos[:2]
+        # dist_to_goal = np.linalg.norm(vec_to_goal)
 
         action_diff = action - self.last_action
         self.last_action = action.copy()
         
         # 提取 Leader A 的线速度和角速度
-        vAx = action[0] * current_max_vel
-        vAy = action[1] * current_max_vel
+        vAx = action[0] * self.max_vel
+        vAy = action[1] * self.max_vel
         wA = 0.0
 
         # 提取 Leader B 的线速度和角速度
-        vBx = action[2] * current_max_vel
-        vBy = action[3] * current_max_vel
+        vBx = action[2] * self.max_vel
+        vBy = action[3] * self.max_vel
         wB = 0.0
 
         # print(abs(wA) + abs(wB))
@@ -482,6 +482,7 @@ class FormationPyBulletEnv(gym.Env):
         # the centroid of the whole formation
         center_pos = center_pos[:2]
         vec_to_goal = self.target_pos[:2] - center_pos
+        vec_to_virtual_goal = self.virtual_target_pos - center_pos
 
         # --- 1. 获取原始世界坐标系数据 ---
         pos_A, quat_A = p.getBasePositionAndOrientation(self.robot_ids[0])
@@ -490,7 +491,8 @@ class FormationPyBulletEnv(gym.Env):
         w_A = angular_vel_A[2]  # A的角速度
         pA = np.array(pos_A[:2])
         vA = np.array(vel_A[:2])
-        target_yaw = np.arctan2(vec_to_goal[1], vec_to_goal[0])
+
+        target_yaw = np.arctan2(vec_to_virtual_goal[1], vec_to_virtual_goal[0])
         delta_yaw_A = target_yaw - yaw_A
         
 
@@ -508,13 +510,15 @@ class FormationPyBulletEnv(gym.Env):
         self._sinB = np.sin(delta_yaw_B)
         
         # --- 2. 构建旋转矩阵 (World -> Body/Target Frame) ---
+
         c, s = np.cos(-target_yaw), np.sin(-target_yaw)
         R = np.array([[c, -s], [s, c]])
+        self.last_target_yaw = target_yaw
         
         # --- 3. [关键修改] 统一坐标变换 ---
         
         # A. 目标向量 (转到 Body Frame)
-        rel_goal_body = R @ vec_to_goal # 结果通常是 [dist, 0]
+        rel_goal_body = R @ vec_to_goal 
         
         # B. 速度向量 (也必须转！否则网络不知道是侧身走还是直走)
         vA_body = R @ vA
@@ -541,9 +545,9 @@ class FormationPyBulletEnv(gym.Env):
 
         # --- 5. 组装最终的 Observation ---
         kinematics_obs = np.array([
-            # 目标 (1维)
-            rel_goal_body[0] / self.wall_length, 
-            # rel_goal_body[1] / self.wall_width, 这个没有用，因为我们把目标放在了 Body Frame 的 X 轴上，Y 轴理论上应该是 0，反而会引入噪声
+            # 目标 (2维)
+            rel_goal_body[0] / self.wall_length,
+            rel_goal_body[1] / self.wall_width,
 
             # 位置 （4维，转到 Body Frame）
             pos_A_body[0] / self.wall_length,
@@ -711,10 +715,8 @@ class FormationPyBulletEnv(gym.Env):
 
         # C. 障碍物碰撞与斥力势场
         if self.enable_obstacles and not done:
-            # crash_threshold = 0.05  # 表面距离小于 5cm 认为撞毁
-            # warn_threshold = 0.35   # 表面距离小于 35cm 开始施加斥力       
-            crash_threshold = 0.05
-            warn_threshold = 0.35
+            crash_threshold = 0.05  # 表面距离小于 5cm 认为撞毁
+            warn_threshold = 0.35   # 表面距离小于 35cm 开始施加斥力       
             
             # 遍历所有机器人
             for i, robot_id in enumerate(self.robot_ids):
@@ -741,7 +743,6 @@ class FormationPyBulletEnv(gym.Env):
                         # --- 2. 预警斥力判定 ---
                         elif min_surface_dist < warn_threshold:
                             # 距离越小（越接近 crash_threshold），斥力越大
-                            # 使用修改后的人工势场公式
                             r_collision -= k_repulsion_base * (1.0 / max(min_surface_dist, 0.01) - 1.0 / warn_threshold)
                         # print(min_surface_dist, r_collision, end="\r")
                 if done: 

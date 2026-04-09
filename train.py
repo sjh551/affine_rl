@@ -2,6 +2,7 @@ import os
 import time
 import torch.nn as nn
 from stable_baselines3 import PPO
+from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
@@ -17,7 +18,7 @@ from pybullet_env import FormationPyBulletEnv
 # ======================================================================
 # 1. 训练配置
 NUM_ENVS = 2               # 并行环境数
-START_STAGE = 2           # 🚩 选择开始阶段: 1 (无障碍) 或 2 (有障碍)
+START_STAGE = 2         # 🚩 选择开始阶段: 1 (无障碍) 或 2 (有障碍)
 
 # 2. 模型加载配置
 # 如果想从头开始训练某个阶段，设为 True
@@ -25,17 +26,17 @@ START_FROM_SCRATCH = False
 
 # 如果 START_FROM_SCRATCH 为 False，指定要加载的文件名 (不带 .zip)
 # 例子: "ppo2_stage1_nav" 或 "ppo2_final_leader"
-LOAD_MODEL_NAME = "ppo2_stage1_nav" 
+LOAD_MODEL_NAME = "ppo2_final_leader" 
 
 # 3. 训练长度
-TIMESTEPS_STAGE1 = 200000
-TIMESTEPS_STAGE2 = 1000000
+TIMESTEPS_STAGE1 = 500000
+TIMESTEPS_STAGE2 = 500000
 # ======================================================================
 
 
 class CustomCombinedExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space):
-        # 我们稍后会计算总维度，先随便填个 1
+        # 先随便填个 1
         super().__init__(observation_space, features_dim=1)
 
         extractors = {}
@@ -48,8 +49,9 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
                 total_concat_size += subspace.shape[0]
                 
             elif "lidar" in key:
-                # 雷达数据 (3, 180) 使用 1D 卷积提取时空特征
-                n_input_channels = subspace.shape[0] # 这里是 3
+                # 雷达数据 (1, 180) 使用 1D 卷积提取时空特征
+                n_input_channels = subspace.shape[0] # 这里是 1
+                # print(n_input_channels)
                 cnn = nn.Sequential(
                     nn.Conv1d(n_input_channels, 32, kernel_size=8, stride=4),
                     nn.ReLU(),
@@ -117,11 +119,20 @@ def create_vectorized_env(num_envs, enable_obstacles=False):
 if __name__ == '__main__':
     
     policy_kwargs = dict(
-        features_extractor_class=CustomCombinedExtractor, 
-        # 对于 CNN 来说 ReLU 通常比 Tanh 梯度更好
-        activation_fn=nn.ReLU, 
-        net_arch=dict(pi=[512, 512], vf=[512, 512])
+    features_extractor_class=CustomCombinedExtractor, 
+    activation_fn=nn.ReLU, 
+    
+    # ==========================================
+    #  LSTM
+    # ==========================================
+    lstm_hidden_size=256,      # LSTM 记忆细胞的容量
+
+    # 这里的 net_arch 是指在 LSTM 处理完之后，再经过的全连接层
+    # 因为 LSTM 已经做了很强的信息融合，MLP 改薄一点
+    net_arch=dict(pi=[256, 256], vf=[256, 256]) 
     )
+
+
     tb_reward_callback = TensorboardRewardCallback()
     # ------------------------------------------------------------------
     # 🏁 阶段一：基础导航训练 (无障碍)
@@ -137,14 +148,14 @@ if __name__ == '__main__':
         env = create_vectorized_env(NUM_ENVS, enable_obstacles=False)
 
         if START_FROM_SCRATCH:
-            print("🆕 正在从零开始创建模型...")
-            model = PPO("MultiInputPolicy", env, verbose=1, policy_kwargs=policy_kwargs,
+            print("正在从零开始创建模型...")
+            model = RecurrentPPO("MultiInputLstmPolicy", env, verbose=1, policy_kwargs=policy_kwargs,
                         learning_rate=3e-4, batch_size=256, n_steps=2048,
                         tensorboard_log="./ppo2_stage1_tensorboard/",
                         device="cuda")
         else:
             print(f"载入模型继续训练: {LOAD_MODEL_NAME}")
-            model = PPO.load(LOAD_MODEL_NAME, env=env, batch_size=256, tensorboard_log="./ppo2_stage1_tensorboard/", device="cuda")
+            model = RecurrentPPO.load(LOAD_MODEL_NAME, env=env, batch_size=256, tensorboard_log="./ppo2_stage1_tensorboard/", device="cuda")
 
 
         model.learn(total_timesteps=TIMESTEPS_STAGE1, tb_log_name="stage1_nav", callback=tb_reward_callback)
@@ -161,13 +172,13 @@ if __name__ == '__main__':
 
         # 逻辑：即使 START_FROM_SCRATCH 是 True，阶段二通常也需要加载阶段一的成果，除非非要硬练
         if START_FROM_SCRATCH:
-            print("⚠️ 警告: 正在完全从零开始进行阶段二训练（不推荐）。")
-            model = PPO("MultiInputPolicy", env, verbose=1, policy_kwargs=policy_kwargs,batch_size=256,
+            print("警告: 正在完全从零开始进行阶段二训练（不推荐）。")
+            model = RecurrentPPO("MultiInputLstmPolicy", env, verbose=1, policy_kwargs=policy_kwargs,batch_size=256,
                         tensorboard_log="./ppo2_stage2_tensorboard/", device="cuda")
         else:
-            print(f"📂 正在加载指定的模型作为起点: {LOAD_MODEL_NAME}")
+            print(f"正在加载指定的模型作为起点: {LOAD_MODEL_NAME}")
             # 加载模型并重置一些参数 (例如增加熵系数 ent_coef 鼓励避障探索)
-            model = PPO.load(LOAD_MODEL_NAME, env=env, 
+            model = RecurrentPPO.load(LOAD_MODEL_NAME, env=env, 
                              ent_coef=0.01, 
                              batch_size=256,
                              tensorboard_log="./ppo2_stage2_tensorboard/", device="cuda")

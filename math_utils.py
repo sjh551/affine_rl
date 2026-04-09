@@ -62,3 +62,36 @@ def get_agent_nominal_config():
         2: np.array([-1.5,  0.0, 0.0])    # Follower (后面)
     }
     return g_nom
+
+def process_lidar_to_vfh(lidar_frames, num_bins=36, max_range=6.0):
+    """
+    将原始雷达射线转换为 VFH 障碍物密度直方图
+    lidar_frames: shape (1, 180) 的 numpy 数组
+    num_bins: 划分的扇区数量 (180度36份，每份5度)
+    max_range: 雷达的最大探测距离
+    """
+    channels, num_rays = lidar_frames.shape
+    rays_per_bin = num_rays // num_bins  # 180 // 36 = 5 根射线对应一个扇区
+    
+    # 初始化 VFH 密度图 (1, 36)
+    vfh_density = np.zeros((channels, num_bins), dtype=np.float32)
+    
+    for c in range(channels):
+        for b in range(num_bins):
+            # 取出当前扇区内的 10 根射线
+            start_idx = b * rays_per_bin
+            end_idx = start_idx + rays_per_bin
+            sector_rays = lidar_frames[c, start_idx:end_idx]
+            
+            # 🌟 核心 1：将“距离”转化为“密度（危险度）”
+            # 假设 sector_rays 存的是物理距离。距离越近，密度越大；超过 max_range 密度为 0
+            # 这里的公式：danger = max(0, (max_range - dist) / max_range)
+            # 例如：距离 0m -> 密度 1.0 (极度危险)；距离 5m -> 密度 0.0 (绝对安全)
+            density_vals = np.clip((max_range - sector_rays) / max_range, 0.0, 1.0)
+            
+            # 🌟 核心 2：池化策略 (Pooling)
+            # 绝对不要用平均值 (np.mean)！如果 9 根线是空的，1 根线扫到一根细柱子，平均值会被拉低，导致撞车。
+            # 必须用最大值 (np.max)，保证只要扇区里有障碍物，这个扇区就标为高危！
+            vfh_density[c, b] = np.max(density_vals)
+            
+    return vfh_density
