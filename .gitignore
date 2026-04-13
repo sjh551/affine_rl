@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 ppo_formation_tensorboard/
 *.zip
+data/lidar_dataset_100k.npy
+data/*.npy

@@ -4,13 +4,14 @@ from stable_baselines3 import PPO
 from pybullet_env import FormationPyBulletEnv 
 from sb3_contrib import RecurrentPPO
 import time
+from project_paths import MODEL_FINAL_NAME, ensure_output_dirs, model_load_path
 
 def evaluate_model(model_path, num_episodes=100):
     print(f"正在加载模型: {model_path}")
     print(f"准备进行 {num_episodes} 轮无渲染批量测试...")
     
     env = FormationPyBulletEnv(render_mode=False, enable_obstacles=True)
-    model = RecurrentPPO.load(model_path)
+    model = PPO.load(model_path)
 
     stats = {"Success": 0, "Crash_Obstacle": 0, "Crash_Team": 0, "Wall_Out": 0, "Timeout": 0, "Unknown": 0}
     
@@ -26,13 +27,13 @@ def evaluate_model(model_path, num_episodes=100):
         obs, _ = env.reset()
         done = False
         steps = 0
-        lstm_states = None
+        # lstm_states = None
         while not done:
             # ⏳ 记录单步开始时间 (使用更高精度的 perf_counter)
             t0 = time.perf_counter()
             
             # 1. 神经网络推理耗时
-            action, lstm_states = model.predict(obs, state=lstm_states, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True)
             # 2. 物理环境交互与跟随者计算耗时
             obs, reward, terminated, truncated, info = env.step(action)
             
@@ -102,5 +103,6 @@ def evaluate_model(model_path, num_episodes=100):
     print("="*45)
 
 if __name__ == "__main__":
-    MODEL_PATH = "ppo2_final_leader.zip" # "ppo2_stage1_nav" 或 "ppo2_final_leader"
+    ensure_output_dirs()
+    MODEL_PATH = model_load_path(MODEL_FINAL_NAME)
     evaluate_model(MODEL_PATH, 100)

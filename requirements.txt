@@ -1,17 +1,29 @@
-# --- 核心数值与科学计算 ---
-numpy
-scipy
+# Core dependencies
+torch>=1.12.0
+torchvision>=0.13.0
 
-# --- 物理引擎与强化学习环境 ---
-gymnasium
-pybullet
-gym
+# Reinforcement learning
+stable-baselines3>=1.8.0
+sb3-contrib>=1.8.0
 
-# --- 强化学习算法库 (含 PyTorch 后端) ---
-torch
-stable-baselines3
-sb3_contrib
+# Physics simulation
+pybullet>=3.2.1
+gymnasium>=0.26.0
+gym>=0.21.0
 
-# --- 可视化与日志记录 ---
-matplotlib
-tensorboard
+# Data science and visualization
+numpy>=1.21.0
+matplotlib>=3.5.0
+pandas>=1.4.0
+seaborn>=0.11.0
+
+# Utilities
+tqdm>=4.64.0
+tensorboard>=2.9.0
+
+# Optional dependencies (for development)
+jupyter>=1.0.0
+ipython>=8.0.0
+black>=22.0.0
+flake8>=4.0.0
+mypy>=0.950

@@ -5,12 +5,16 @@ import pybullet as p
 import pybullet_data
 import time
 import math
-from formation_graph import FormationGraph
-from formation_utils import get_square_configuration, get_square_topology
+from utils.formation_graph import FormationGraph
+from utils.formation_utils import get_square_configuration, get_square_topology
 import itertools
 from collections import deque
 import os
 import shutil
+
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf", "ranger_mini.urdf").replace("\\", "/")
 
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
@@ -37,7 +41,7 @@ class FormationPyBulletEnv(gym.Env):
         
         # --- 参数配置 ---
         self.n_leaders = 2
-        self.n_followers = 0
+        self.n_followers = 2
         self.num_robots = self.n_leaders + self.n_followers 
         self.robot_ids = []
         
@@ -53,10 +57,13 @@ class FormationPyBulletEnv(gym.Env):
         
         self.n_nearest_obs = 16 # 最近的12个障碍物 + 四面墙 = 16 个观测点
         self.n_lidar_rays = 180 # 雷达一圈多少线
-        self.lidar_range = 6.0 # 最大长度
+        self.lidar_range = 7.0 # 最大长度
 
-        self.lidar_buffer_A = deque(maxlen=1)
-        self.lidar_buffer_B = deque(maxlen=1)
+
+        self.frame_len = 20  # 20帧的历史数据
+        self.in_channels = 5 # 每3条雷达线合成一个输入通道，减少输入维度
+        self.lidar_buffer_A = deque(maxlen=self.frame_len)
+        self.lidar_buffer_B = deque(maxlen=self.frame_len)
 
         # 运动学特征 (距离, 相对向量, 速度, 姿态) 
         kinematics_dim = 2 + 4 + 4 + 6 + 2 + 4 # 6 表示sin(),cos(),以及当前的角速度w x 2，-1 表示我们把目标的 Y 轴坐标去掉了 + 2 表示期望向量 + 上一时刻的动作
@@ -65,9 +72,9 @@ class FormationPyBulletEnv(gym.Env):
             # 基础运动学状态 (1D 向量)
             "kinematics": spaces.Box(low=-np.inf, high=np.inf, shape=(kinematics_dim,), dtype=np.float32),
             # 雷达 A 的状态: 3 个通道 (历史帧), 每个通道 180 个数值 
-            "lidar_A": spaces.Box(low=0.0, high=1.0, shape=(1, self.n_lidar_rays), dtype=np.float32),
+            "lidar_A": spaces.Box(low=0.0, high=1.0, shape=(self.in_channels, 60), dtype=np.float32),
             # 雷达 B 的状态
-            "lidar_B": spaces.Box(low=0.0, high=1.0, shape=(1, self.n_lidar_rays), dtype=np.float32)
+            "lidar_B": spaces.Box(low=0.0, high=1.0, shape=(self.in_channels, 60), dtype=np.float32)
         })
         # print(f"Observation space dimension: {obs_dim}")
 
@@ -160,7 +167,7 @@ class FormationPyBulletEnv(gym.Env):
             spawn_pos = [rx, ry, 0.15]
             spawn_quat = p.getQuaternionFromEuler([0, 0, yaw])
 
-            rid = p.loadURDF("./ranger_mini_v3/urdf/ranger_mini.urdf", basePosition=spawn_pos, baseOrientation=spawn_quat)
+            rid = p.loadURDF(RANGER_URDF_PATH, basePosition=spawn_pos, baseOrientation=spawn_quat)
             # p.changeVisualShape(objectUniqueId=rid, 
             #         linkIndex=-1, 
             #         rgbaColor=[1.0, 0.0, 0.0, 1.0])
@@ -218,10 +225,10 @@ class FormationPyBulletEnv(gym.Env):
         init_lidar_A = self._get_lidar(pos_A[:2], target_yaw)
         init_lidar_B = self._get_lidar(pos_B[:2], target_yaw)
 
-        # 清空之前的残留，并将初始帧复制 3 份填入
+        # 清空之前的残留，并将初始帧复制 20 份填入
         self.lidar_buffer_A.clear()
         self.lidar_buffer_B.clear()
-        for _ in range(3):
+        for _ in range(self.frame_len):
             self.lidar_buffer_A.append(init_lidar_A)
             self.lidar_buffer_B.append(init_lidar_B)
 
@@ -337,7 +344,7 @@ class FormationPyBulletEnv(gym.Env):
         # 1. 提取实时的全局状态 (x, y, yaw)
         # p_flat shape: (27,), v_l_flat shape: (6,)
         p_all = []
-        for i in range(self.num_robots):  # 9辆车
+        for i in range(self.num_robots):  
             p_all.extend(states[i]['pos'][:2])
             p_all.extend([states[i]['yaw']])
         p_flat = np.array(p_all)
@@ -373,8 +380,12 @@ class FormationPyBulletEnv(gym.Env):
         # 4. 世界坐标系 -> 体坐标系 转换与驱动
         for idx in range(self.n_followers):
             robot_id = self.robot_ids[idx + 2]
-            world_vx = follower_vels[idx][0] # 期望绝对 X 速度
-            world_vy = follower_vels[idx][1] # 期望绝对 Y 速度
+
+            _, APF_vel = self._get_obstacle_repulsion(states[idx + 2]['pos'][:2])
+            # print(f"Follower {idx} APF_vel: ({APF_vel[0]:.2f}, {APF_vel[1]:.2f})")
+
+            world_vx = follower_vels[idx][0] + APF_vel[0]  # 期望绝对 X 速度
+            world_vy = follower_vels[idx][1] + APF_vel[1]  # 期望绝对 Y 速度
             # w = follower_vels[idx][2]        # 期望角速度
             
             # 直接从 states 字典获取 yaw
@@ -387,6 +398,7 @@ class FormationPyBulletEnv(gym.Env):
             #     print(f"angle:{np.arctan2(v_body_y,v_body_x)}")
             
             # 调用底层舵轮解算函数
+            # print(f"Follower {idx} world_v: ({world_vx:.2f}, {world_vy:.2f}), body_v: ({v_body_x:.2f}, {v_body_y:.2f})")
             self._drive_robot(robot_id, v_body_x, v_body_y, 0)
     
     def _drive_robot(self, robot_id, v_x, v_y, w):
@@ -536,12 +548,28 @@ class FormationPyBulletEnv(gym.Env):
         # 分别获取 A, B 身边的障碍物特征
         lidar_A = self._get_lidar(pA, target_yaw, self.n_lidar_rays, self.lidar_range)
         lidar_B = self._get_lidar(pB, target_yaw, self.n_lidar_rays, self.lidar_range)
-        # append 会自动把最老的一帧挤出去 (因为设置了 maxlen=3)
+
+        # append 会自动把最老的一帧挤出去
         self.lidar_buffer_A.append(lidar_A)
         self.lidar_buffer_B.append(lidar_B)
-        # 将 deque 转换为 numpy 矩阵，形状自动变为 (3, 180)
-        stacked_lidar_A = np.array(self.lidar_buffer_A, dtype=np.float32)
-        stacked_lidar_B = np.array(self.lidar_buffer_B, dtype=np.float32)
+
+        sparse_frames_A = [
+            self.lidar_buffer_A[0], 
+            self.lidar_buffer_A[4], 
+            self.lidar_buffer_A[9], 
+            self.lidar_buffer_A[14], 
+            self.lidar_buffer_A[-1]
+        ]
+        sparse_frames_B = [
+            self.lidar_buffer_B[0], 
+            self.lidar_buffer_B[4], 
+            self.lidar_buffer_B[9], 
+            self.lidar_buffer_B[14], 
+            self.lidar_buffer_B[-1]
+        ]
+        stacked_lidar_A = np.array(sparse_frames_A, dtype=np.float32)
+        stacked_lidar_B = np.array(sparse_frames_B, dtype=np.float32)
+        # print(f"lidar_A shape: {stacked_lidar_A.shape}, lidar_B shape: {stacked_lidar_B.shape}")
 
         # --- 5. 组装最终的 Observation ---
         kinematics_obs = np.array([
@@ -607,7 +635,7 @@ class FormationPyBulletEnv(gym.Env):
 
         # 3. 编队误差状态
         actual_vec = pA_3d[:2] - pB_3d[:2]
-        dist_AB = np.linalg.norm(actual_vec)
+        # dist_AB = np.linalg.norm(actual_vec)
         shape_error = np.linalg.norm(actual_vec - self.nominal_vec[:2])
 
         # 4. 获取所有机器人的 2D 位置
@@ -629,43 +657,50 @@ class FormationPyBulletEnv(gym.Env):
         # [2] 编队形状与朝向奖励 (Shape & Alignment)
         # =========================================================
         r_shape = 0.0
-        
-        # A. 速度朝向一致性 (距离目标较远时鼓励朝向目标)
-        if dist_to_goal > 2.0:
-            if speed_A > 0.1:
-                r_shape -= self.k_vel_align * (1.0 - np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal))
-            if speed_B > 0.1:
-                r_shape -= self.k_vel_align * (1.0 - np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal))
-        # print(r_shape)
-        # B. 奇异性避免与通信断连
-        if dist_AB < self.safe_margin + 0.2:
-            r_shape -= 2.0  # 靠得太近极度危险
-        elif dist_AB > 11.0:
-            r_shape -= (dist_AB - 11.0) * self.k_disconnect
+
+        # B. 奇异性避免与通信断连 这部分也没有用
+        # if dist_AB < self.safe_margin + 0.2:
+        #     r_shape -= 2.0  # 靠得太近极度危险
+        # elif dist_AB > 11.0:
+        #     r_shape -= (dist_AB - 11.0) * self.k_disconnect
 
         # C. 目标点附近形状约束
-        if dist_to_goal < 5.0 and shape_error > 2.0:
-            r_shape -= self.k_shape_err * shape_error
-            # print(r_shape)
+        if shape_error > 2.0:
+            r_shape -= (-1/(1 + np.exp(-2*(dist_to_goal-4.0))) + 1) * self.k_shape_err * shape_error
+        # print(r_shape)
 
 
         # =========================================================
-        # [3] 动作平滑与路径跟踪惩罚 (Smoothness & Path)
+        # [3] 动作平滑与路径跟踪惩罚 (Smoothness & Path)    去掉这个惩罚好像没有什么影响
         # =========================================================
         r_smooth = 0.0
+
+        # A. 速度朝向一致性 (距离目标较远时鼓励朝向目标)
+
+        if speed_A > 0.1:
+            dot_A = np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal)
+            # 使用 e^(1 - dot) - 1.0
+            # dot=1 (正向)  -> e^0 - 1 = 0 
+            # dot=0 (侧向)  -> e^1 - 1 ≈ 1.71
+            # dot=-1 (背向) -> e^2 - 1 ≈ 6.38 (暴击惩罚！)
+            r_smooth -= self.k_vel_align * 1/(1 + np.exp(-5*(dist_to_goal-2.0))) * (np.exp(1.0 - dot_A) - 1.0)
+            
+        if speed_B > 0.1:
+            dot_B = np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal)
+            r_smooth -= self.k_vel_align * 1/(1 + np.exp(-5*(dist_to_goal-2.0))) * (np.exp(1.0 - dot_B) - 1.0)
         
         # A. 动作变化率惩罚 (防抽搐)
-        dvA_linear = np.linalg.norm(action_diff[0:2])
-        dvB_linear = np.linalg.norm(action_diff[2:4])
-        r_smooth -= self.k_smooth_linear * (dvA_linear + dvB_linear)
+        # dvA_linear = np.linalg.norm(action_diff[0:2])
+        # dvB_linear = np.linalg.norm(action_diff[2:4])
+        # r_smooth -= self.k_smooth_linear * (dvA_linear + dvB_linear)
 
 
-        # B. 路径横向偏差惩罚 (Cross Track Error)
-        R_vec = center_pos[:2] - self.start_center[:2]
-        cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
-        cte = cross_product / self.L_norm
-        # print(cte)
-        r_smooth -= self.k_path_cost * cte
+        # # B. 路径横向偏差惩罚 (Cross Track Error)
+        # R_vec = center_pos[:2] - self.start_center[:2]
+        # cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
+        # cte = cross_product / self.L_norm
+        # # print(cte)
+        # r_smooth -= self.k_path_cost * cte
 
 
         # =========================================================
@@ -680,19 +715,42 @@ class FormationPyBulletEnv(gym.Env):
         
         # 预先推算 Followers 估计位置 (用于避障预警)
         # estimated_team_positions = []
-        # if self.n_followers > 0 and self.enable_obstacles:
-        #     p_leader_flat = np.concatenate([pA_3d, pB_3d])
-        #     p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_flat
-        #     current_A = np.array([p_follower_est_flat[0*3], p_follower_est_flat[0*3 + 1]])
-        #     current_B = np.array([p_follower_est_flat[1*3], p_follower_est_flat[1*3 + 1]])
-        #     err_A = np.linalg.norm(all_pos[2][:2] - current_A)
-        #     err_B = np.linalg.norm(all_pos[3][:2] - current_B)
-        #     # for i in range(self.n_followers):
-        #         # estimated_team_positions.append(np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]]))
-                
-        #     # debug 用的
-        #     self.followerA_err.append(err_A)
-        #     self.followerB_err.append(err_B)
+        if self.n_followers > 0 and self.enable_obstacles:
+            pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A)
+            pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
+            p_leader_pre_flat = np.concatenate([pre_A, pre_B])
+
+            p_leader_current_flat = np.concatenate([[all_pos[0][0], all_pos[0][1], yaw_A], [all_pos[1][0], all_pos[1][1], yaw_B]])
+    
+            p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_pre_flat
+            p_follower_expected = -self.M_ff_inv @ self.M_fl @ p_leader_current_flat    # calculates the current expected follower' positions
+
+            for i in range(self.n_followers):
+                est_pos = np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]])    # 取出预测的位置
+                expected_pos = np.array([p_follower_expected[i*3], p_follower_expected[i*3 + 1]])
+                actual_pos = all_pos[i + 2]
+                error_dist = np.linalg.norm(actual_pos - expected_pos)
+                tolerance = 0.2 # 允许一定的误差范围，超过这个范围才扣分
+                if error_dist > tolerance:
+                    r_collision -= 5.0 * (error_dist - tolerance)
+                    # print(f"Follower {i} deformation error: {error_dist:.2f}, r_collision: {r_collision:.2f}")
+
+                min_dist, _  = self._get_obstacle_repulsion(est_pos)   # 计算离最近的位置
+                if min_dist < self.safe_margin:
+                    cost  = (self.safe_margin - min_dist)   # 离得越近，惩罚越大
+                    r_collision -= 10 * cost
+        # print(r_collision)
+            
+            # current_A = np.array([p_follower_est_flat[0*3], p_follower_est_flat[0*3 + 1]])
+            # current_B = np.array([p_follower_est_flat[1*3], p_follower_est_flat[1*3 + 1]])
+            # err_A = np.linalg.norm(all_pos[2][:2] - current_A)
+            # err_B = np.linalg.norm(all_pos[3][:2] - current_B)
+                            
+            # # debug 用的
+            # self.followerA_err.append(err_A)
+            # self.followerB_err.append(err_B)
+
+
 
         # A. 撞墙检测
         limit_x = self.wall_length - 0.5 - 0.6
@@ -917,8 +975,6 @@ class FormationPyBulletEnv(gym.Env):
                 self.obstacles.append(obs_id)
             
 
-
-
         elif config_id == 2:    
             # ==========================================
             # 八字形逐渐缩小的袋口 (Funnel / Pocket)
@@ -1004,15 +1060,17 @@ class FormationPyBulletEnv(gym.Env):
         return states
 
     def _get_center_pos(self):
-        """计算编队中心点"""
+        """
+        计算编队中心点，只算了领导者，感觉算了跟随者不好估计
+        """
         pos_list = []
-        for i, robot_id in enumerate(self.robot_ids):
+        for robot_id in self.robot_ids[:self.n_leaders]:
             pos, _ = p.getBasePositionAndOrientation(robot_id)
             pos_list.append(np.array(pos))
         center = np.mean(pos_list, axis=0)
         return center
 
-    def _get_lidar(self, pos_2d, reference_yaw, num_rays=180, ray_length=6.0):
+    def _get_lidar(self, pos_2d, reference_yaw, num_rays=180, ray_length=7.0):
         """
         使用 PyBullet 的批量射线检测模拟 2D 激光雷达。
         reference_yaw: 雷达 0度 射线的基准朝向
@@ -1037,5 +1095,70 @@ class FormationPyBulletEnv(gym.Env):
         # 如果是 1.0，说明没扫到任何东西。
         # 我们把它反转一下：1.0 - fraction，这样越接近 1.0 代表障碍物越贴脸，0.0 代表前方畅通
         features = [1.0 - res[2] for res in results]
+        features = np.array(features).reshape(60, 3).max(axis=1)
         
         return features
+    
+    
+    def _forward_motion(self, pos, action, yaw):
+        """
+        计算经过时间dt后, what is the next state
+        state: 位置
+        return: 预测的下一状态, 2D位置
+        """
+        dt = 0.5    # 一个step为0.1s, 因为动作是线性的, 直接预测5步之后的状态
+        s = pos.copy()
+        s[0] += action[0] * dt  # x 變化
+        s[1] += action[1] * dt  # y 變化
+
+        return np.array([s[0], s[1], yaw])
+    
+    def _get_obstacle_repulsion(self, pos_2d, safe_margin=1.0, num_rays=90):
+        """
+        全向势场探测器：向四周发射射线，算出一个总的避障斥力向量
+        返回: min_dist (最短距离), repulsion_vec (斥力向量 [vx, vy])
+        """
+        
+        ray_from = []
+        ray_to = []
+        z_height = 0.23
+        
+        # 记录每根射线的方向向量
+        ray_dirs = []
+        
+        for i in range(num_rays):
+            angle = i * (2 * np.pi / num_rays)
+            dir_vec = np.array([np.cos(angle), np.sin(angle)])
+            ray_dirs.append(dir_vec)
+            
+            ray_from.append([pos_2d[0], pos_2d[1], z_height])
+            ray_to.append([pos_2d[0] + safe_margin * dir_vec[0],
+                           pos_2d[1] + safe_margin * dir_vec[1],
+                           z_height])
+
+        results = p.rayTestBatch(ray_from, ray_to)
+        
+        min_dist = safe_margin
+        repulsion_vec = np.zeros(2) # 初始化斥力向量
+        
+        # APF 斥力系数
+        k_repulsion = 1.5 
+        
+        for i, res in enumerate(results):
+            hit_object_id = res[0]
+            hit_fraction = res[2]
+            
+            # 只有打中非机器人实体时，才产生斥力
+            if hit_fraction < 1.0 and hit_object_id not in self.robot_ids:
+                dist = hit_fraction * safe_margin
+                if dist < min_dist:
+                    min_dist = dist
+                
+                # 斥力计算公式：距离越近，斥力呈指数/反比增加
+                # (safe_margin - dist) 确保在边缘时斥力为 0，平滑过渡
+                force_magnitude = k_repulsion * (safe_margin - dist)**2 
+                
+                # 斥力方向 = 射线的反方向！
+                repulsion_vec -= force_magnitude * ray_dirs[i] 
+                    
+        return min_dist, repulsion_vec

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pybullet as p
 from pybullet_env import FormationPyBulletEnv # 替换为你实际的环境类名
+from project_paths import FIGURES_DIR, ensure_output_dirs
 
 def measure_tracking_error(test_speed, test_steps=300):
     """
@@ -61,8 +62,9 @@ def measure_tracking_error(test_speed, test_steps=300):
     return error_f1_history, error_f2_history
 
 def plot_speed_comparison():
+    ensure_output_dirs()
     # 测试三个典型的速度梯度
-    test_speeds = [0.4, 0.7, 1.0]
+    test_speeds = [0.4, 1.0]
     import matplotlib.cm as cm
     colors = cm.tab10(np.linspace(0, 1, len(test_speeds)))
     
@@ -83,7 +85,7 @@ def plot_speed_comparison():
                  color=color, linestyle='--', linewidth=2, alpha=0.8)
 
     # 设定一条“安全容忍基准线” (假设偏离 0.5 米是极限)
-    plt.axhline(y=0.2, color='black', linestyle=':', label='Safety Threshold (0.5m)')
+    # plt.axhline(y=0.2, color='black', linestyle=':', label='Safety Threshold (0.5m)')
 
     # 图表美化设置
     plt.title('Follower 1 & 2 Tracking Error at Different Leader Speeds', fontsize=14, fontweight='bold')
@@ -96,8 +98,9 @@ def plot_speed_comparison():
     plt.tight_layout()
     
     # 保存并显示图片
-    plt.savefig('tracking_error_analysis_f1_f2.png', dpi=300, bbox_inches='tight')
-    print("\n✅ 测试完成！图表已保存为 tracking_error_analysis_f1_f2.png")
+    fig_path = FIGURES_DIR / 'tracking_error_analysis_f1_f2.png'
+    plt.savefig(str(fig_path), dpi=300, bbox_inches='tight')
+    print(f"\n✅ 测试完成！图表已保存为 {fig_path}")
     plt.show()
 
 if __name__ == "__main__":

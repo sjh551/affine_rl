@@ -2,6 +2,11 @@ import pybullet as p
 import pybullet_data
 import numpy as np
 import time
+import os
+
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf", "ranger_mini.urdf").replace("\\", "/")
 
 # 1. 初始化仿真环境
 physicsClient = p.connect(p.GUI)
@@ -12,7 +17,7 @@ p.loadURDF("plane.urdf")
 # 2. 加载 Ranger Mini V3 模型
 # 请确保你的 URDF 和 meshes 路径正确
 for i in range(4):
-    robot_id = p.loadURDF("ranger_mini_v3/urdf/ranger_mini.urdf", basePosition=[0-i*2.0, 0, 0.15])
+    robot_id = p.loadURDF(RANGER_URDF_PATH, basePosition=[0-i*2.0, 0, 0.15])
 
 # 3. 核心索引配置 (根据你之前提供的 ID 信息)
 # 对应顺序: [FL, FR, RL, RR]

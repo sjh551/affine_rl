@@ -6,15 +6,15 @@ import torch
 from stable_baselines3 import PPO
 from sb3_contrib import RecurrentPPO
 from pybullet_env import FormationPyBulletEnv
+from project_paths import MODEL_FINAL_NAME, model_load_path, MODEL_STAGE1_NAME
 
 
 # 1. 加载环境和模型
-# 注意：这里开启 render_mode=True，你会看到一个 PyBullet 的 3D 窗口弹出
 env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
-# 尝试加载模型，如果没有模型文件，就随机跑（方便调试代码逻辑）
+# 尝试加载模型，如果没有模型文件，就随机
 try:
-    # model = RecurrentPPO.load("ppo2_stage1_nav", env=env)
-    model = RecurrentPPO.load("ppo2_final_leader", env=env)
+    # model = PPO.load(model_load_path(MODEL_STAGE1_NAME), env=env)
+    model = PPO.load(model_load_path(MODEL_FINAL_NAME), env=env)
     print("✅ 成功加载 RL 模型！")
     # 打印 CUDA 状态和模型所在设备
     try:
@@ -49,14 +49,13 @@ print("正在运行仿真... (请看弹出的 PyBullet 窗口)")
 # 用于画图的数据初始化
 all_trajectories = {0:([],[]), 1:([],[]), 2:([],[]),3:([],[]),4:([],[]),5:([],[]),6:([],[]),7:([],[]),8:([],[])} # 9 个智能体的轨迹数据
 
-lstm_states = None
 
 while not done:
     if use_rl:
         # 让模型预测动作 (deterministic=True 表示使用确定性策略，不随机探索)
-        action, lstm_states = model.predict(
+        action, _ = model.predict(
             obs, 
-            state=lstm_states,      # <--- 传入记忆
+            # state=lstm_states,      # <--- 传入记忆
             deterministic=True
         )
     else:
@@ -87,6 +86,7 @@ while not done:
     # 如果到了目标或者超时，就停止
     if done:
         print(f"回合结束。结果: {info.get('reason', 'unknown')}")
+        print(f"进度奖励：{env.ep_rew_progress:.2f}, 形状奖励：{env.ep_rew_shape:.2f}, 碰撞奖励：{env.ep_rew_collision:.2f}, 平滑奖励：{env.ep_rew_smooth:.2f}, 时间奖励：{env.ep_rew_time:.2f}")
         break
 
 # 关闭物理引擎
