@@ -4,7 +4,7 @@ import sys
 # Add parent directory to Python path to import pybullet_env
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 请把这里的导入替换为你自己实际的环境类
-from pybullet_env import FormationPyBulletEnv 
+from POMDP_env import FormationPyBulletEnv 
 from project_paths import DATASET_100K_PATH
 
 def collect_lidar_dataset(total_frames=100000, save_path="lidar_dataset.npy"):

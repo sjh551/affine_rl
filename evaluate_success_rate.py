@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 from stable_baselines3 import PPO
-from pybullet_env import FormationPyBulletEnv 
+from POMDP_env import FormationPyBulletEnv 
 from sb3_contrib import RecurrentPPO
 import time
 from project_paths import MODEL_FINAL_NAME, ensure_output_dirs, model_load_path

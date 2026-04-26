@@ -1,12 +1,12 @@
 import optuna
 import numpy as np
-import gym # 或者 import gymnasium as gym，取决于你的 SB3 版本
+import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_util import make_vec_env
 
 # 导入你自己的环境类 (请根据你的实际文件名修改)
-from pybullet_env import FormationPyBulletEnv 
+from POMDP_env import FormationPyBulletEnv 
 
 def objective(trial):
     """

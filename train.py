@@ -22,7 +22,7 @@ from project_paths import (
 )
 
 # 导入自定义环境
-from pybullet_env import FormationPyBulletEnv
+from POMDP_env import FormationPyBulletEnv
 
 
 # ======================================================================
@@ -42,7 +42,7 @@ LOAD_MODEL_NAME = "ppo2_stage1_nav"
 
 # 3. 训练长度
 TIMESTEPS_STAGE1 = 500000
-TIMESTEPS_STAGE2 = 500000
+TIMESTEPS_STAGE2 = 5000000
 # ======================================================================
 
 
@@ -178,6 +178,17 @@ def create_vectorized_env(num_envs, enable_obstacles=False):
 if __name__ == '__main__':
     ensure_output_dirs()
 
+    TARGET_BUFFER_SIZE = 4096  # 你在 2 核时验证成功的总 Buffer (2 * 2048)
+    
+    # 动态计算 n_steps。32核时 n_steps=128，2核时 n_steps=2048
+    dynamic_n_steps = max(TARGET_BUFFER_SIZE // NUM_ENVS, 64) 
+    
+    # 动态计算 batch_size。保证网络每次更新的 batch 划分比例一致
+    # 4096 的 Buffer 配合 256 的 Batch Size，恰好划分为 16 个 minibatches
+    dynamic_batch_size = 256
+
+
+
     # 预训练模型路径
     pretrained_encoder_path = str(PRETRAINED_ENCODER_PATH)
 
@@ -188,8 +199,8 @@ if __name__ == '__main__':
         freeze_encoder = False 
     else:
         # 阶段二：避障训练，冻结雷达参数
-        use_pretrained = True  # 使用预训练权重
-        freeze_encoder = True  # 冻结雷达编码器参数
+        use_pretrained = False  # 使用预训练自编码器权重
+        freeze_encoder = False  # 冻结雷达编码器参数
 
     policy_kwargs = dict(
         features_extractor_class=CustomCombinedExtractor,
@@ -218,7 +229,7 @@ if __name__ == '__main__':
         if START_FROM_SCRATCH:
             print("正在从零开始创建模型...")
             model = PPO("MultiInputPolicy", env, verbose=1, policy_kwargs=policy_kwargs,
-                        learning_rate=3e-4, batch_size=256, n_steps=2048,
+                        learning_rate=3e-4, batch_size=dynamic_batch_size, n_steps=dynamic_n_steps,
                         tensorboard_log=str(TB_STAGE1_DIR),
                         device="cuda")
             try:
@@ -230,7 +241,7 @@ if __name__ == '__main__':
                 print('无法统计模型参数:', e)
         else:
             print(f"载入模型继续训练: {LOAD_MODEL_NAME}")
-            model = PPO.load(model_load_path(LOAD_MODEL_NAME), env=env, batch_size=256, tensorboard_log=str(TB_STAGE1_DIR), device="cuda")
+            model = PPO.load(model_load_path(LOAD_MODEL_NAME), env=env, batch_size=dynamic_batch_size, n_steps=dynamic_n_steps, tensorboard_log=str(TB_STAGE1_DIR), device="cuda")
 
 
         model.learn(total_timesteps=TIMESTEPS_STAGE1, tb_log_name="stage1_nav", callback=tb_reward_callback)
@@ -248,14 +259,14 @@ if __name__ == '__main__':
         # 逻辑：即使 START_FROM_SCRATCH 是 True，阶段二通常也需要加载阶段一的成果，除非非要硬练
         if START_FROM_SCRATCH:
             print("警告: 正在完全从零开始进行阶段二训练（不推荐）。")
-            model = PPO("MultiInputPolicy", env, verbose=1, policy_kwargs=policy_kwargs,batch_size=256,
+            model = PPO("MultiInputPolicy", env, verbose=1, policy_kwargs=policy_kwargs,batch_size=dynamic_batch_size, n_steps=dynamic_n_steps, learning_rate=3e-4,
                         tensorboard_log=str(TB_STAGE2_DIR), device="cuda")
         else:
             print(f"正在加载指定的模型作为起点: {LOAD_MODEL_NAME}")
             # 加载模型并重置一些参数 (例如增加熵系数 ent_coef 鼓励避障探索)
             model = PPO.load(model_load_path(LOAD_MODEL_NAME), env=env, 
                              ent_coef=0.01, 
-                             batch_size=256,
+                             batch_size=dynamic_batch_size, n_steps=dynamic_n_steps,
                              learning_rate=3e-5,
                              tensorboard_log=str(TB_STAGE2_DIR), device="cuda")
 

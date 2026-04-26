@@ -6,7 +6,7 @@ import torch
 import sys
 from pathlib import Path
 from stable_baselines3 import PPO
-from pybullet_env import FormationPyBulletEnv 
+from POMDP_env import FormationPyBulletEnv 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:

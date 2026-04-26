@@ -5,7 +5,7 @@ import pybullet as p  # 必须导入 pybullet 才能获取位置
 import torch
 from stable_baselines3 import PPO
 from sb3_contrib import RecurrentPPO
-from pybullet_env import FormationPyBulletEnv
+from POMDP_env import FormationPyBulletEnv
 from project_paths import MODEL_FINAL_NAME, model_load_path, MODEL_STAGE1_NAME
 
 

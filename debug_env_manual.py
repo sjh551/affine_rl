@@ -1,16 +1,18 @@
 import time
 import pybullet as p
 import numpy as np
-from pybullet_env import FormationPyBulletEnv
+from POMDP_env import FormationPyBulletEnv
+from draw.shoot_img import capture_thesis_image
 
 # 初始化环境
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False,hide_robots=False, draw_line=True)
 env.reset()
 
 print("================================================")
 print(" 方向键[↑↓←→] 控制 Leader A 移动, 1,2 控制转动")
 print(" [WSAD] 控制 Leader B 移动，Q,E 控制转动")
 print(" 按下 [R] 重置环境")
+print(" 按下 [P] 截图到 outputs/figures/")
 print("================================================")
 
 while True:
@@ -53,6 +55,11 @@ while True:
     if ord('r') in keys and keys[ord('r')] & p.KEY_WAS_TRIGGERED:
         env.reset()
         print("环境已重置！")
+        continue
+    
+    # 截图键 'p'
+    if ord('p') in keys and keys[ord('p')] & p.KEY_WAS_TRIGGERED:
+        capture_thesis_image("environment.png")
         continue
 
     # 3. 喂给环境

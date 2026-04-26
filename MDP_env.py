@@ -6,7 +6,7 @@ import pybullet_data
 import time
 import math
 from utils.formation_graph import FormationGraph
-from utils.formation_utils import get_square_configuration, get_square_topology
+from utils.formation_utils import get_square_configuration, get_square_topology, get_nominal_configuration, get_topology
 import itertools
 from collections import deque
 import os
@@ -17,7 +17,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf", "ranger_mini.urdf").replace("\\", "/")
 
 class FormationPyBulletEnv(gym.Env):
-    def __init__(self, render_mode=False, enable_obstacles=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
+    def __init__(self, render_mode=False, enable_obstacles=True, hide_robots=False, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
                  k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
         super(FormationPyBulletEnv, self).__init__()
         
@@ -32,6 +32,7 @@ class FormationPyBulletEnv(gym.Env):
 
         # --- 1. PyBullet 初始化配置 ---
         self.render_mode = render_mode
+        self.hide_robots = hide_robots  # 是否隐藏小车模型
         if self.render_mode:
             self.physicsClient = p.connect(p.GUI)
         else:
@@ -168,9 +169,18 @@ class FormationPyBulletEnv(gym.Env):
             spawn_quat = p.getQuaternionFromEuler([0, 0, yaw])
 
             rid = p.loadURDF(RANGER_URDF_PATH, basePosition=spawn_pos, baseOrientation=spawn_quat)
-            # p.changeVisualShape(objectUniqueId=rid, 
-            #         linkIndex=-1, 
-            #         rgbaColor=[1.0, 0.0, 0.0, 1.0])
+            
+            # 如果隐藏小车，设置其透明度为 0
+            if self.hide_robots:
+                p.changeVisualShape(objectUniqueId=rid, 
+                        linkIndex=-1, 
+                        rgbaColor=[1.0, 0.0, 0.0, 0.0])  # Alpha=0 隐藏
+                # 隐藏所有链接
+                for link_idx in range(p.getNumJoints(rid)):
+                    p.changeVisualShape(objectUniqueId=rid, 
+                            linkIndex=link_idx, 
+                            rgbaColor=[1.0, 0.0, 0.0, 0.0])
+            
             for joint_idx in range(p.getNumJoints(rid)):
                 if joint_idx in self.steer_indices:
                     p.changeDynamics(rid, joint_idx, lateralFriction=0.1)

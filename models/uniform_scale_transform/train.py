@@ -26,7 +26,7 @@ from project_paths import (
 )
 
 # 导入自定义环境
-from pybullet_env import FormationPyBulletEnv
+from POMDP_env import FormationPyBulletEnv
 
 
 # ======================================================================

@@ -1,4 +1,4 @@
-from pybullet_env import FormationPyBulletEnv
+from POMDP_env import FormationPyBulletEnv
 import time
 import numpy as np
 

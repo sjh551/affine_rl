@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pybullet as p
-from pybullet_env import FormationPyBulletEnv # 替换为你实际的环境类名
+from POMDP_env import FormationPyBulletEnv # 替换为你实际的环境类名
 from project_paths import FIGURES_DIR, ensure_output_dirs
 
 def measure_tracking_error(test_speed, test_steps=300):
