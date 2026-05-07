@@ -7,6 +7,11 @@ from stable_baselines3 import PPO
 from sb3_contrib import RecurrentPPO
 from POMDP_env import FormationPyBulletEnv
 from project_paths import MODEL_FINAL_NAME, model_load_path, MODEL_STAGE1_NAME
+from draw.trajectory_formation_plot import plot_trajectory_and_formation
+from draw.distance_statistics_plot import plot_distance_statistics
+
+plt.rcParams['font.family'] = ['Times New Roman', 'SimSun']
+plt.rcParams['axes.unicode_minus'] = False
 
 
 # 1. 加载环境和模型
@@ -47,7 +52,12 @@ done = False
 print("正在运行仿真... (请看弹出的 PyBullet 窗口)")
 
 # 用于画图的数据初始化
-all_trajectories = {0:([],[]), 1:([],[]), 2:([],[]),3:([],[]),4:([],[]),5:([],[]),6:([],[]),7:([],[]),8:([],[])} # 9 个智能体的轨迹数据
+num_robots = int(getattr(env, 'num_robots', len(getattr(env, 'robot_ids', [])) or 0))
+if num_robots <= 0:
+    num_robots = 4
+
+# 轨迹字典: key=机器人索引, value=(x序列, y序列)
+all_trajectories = {i: ([], []) for i in range(num_robots)}
 
 
 while not done:
@@ -86,81 +96,50 @@ while not done:
     # 如果到了目标或者超时，就停止
     if done:
         print(f"回合结束。结果: {info.get('reason', 'unknown')}")
-        print(f"进度奖励：{env.ep_rew_progress:.2f}, 形状奖励：{env.ep_rew_shape:.2f}, 碰撞奖励：{env.ep_rew_collision:.2f}, 平滑奖励：{env.ep_rew_smooth:.2f}, 时间奖励：{env.ep_rew_time:.2f}")
+        print(f"进度奖励：{env.ep_rew_progress:.2f}, 形状奖励：{env.ep_rew_shape:.2f}, 碰撞奖励：{env.ep_rew_collision:.2f}, 平滑奖励：{env.ep_rew_smooth:.2f}, 时间奖励：{env.ep_rew_time:.2f}, 总奖励：{env.ep_rew_progress + env.ep_rew_shape + env.ep_rew_collision + env.ep_rew_smooth + env.ep_rew_time:.2f} ")
         break
+
+# 在断开 PyBullet 连接前，缓存障碍物与围墙的几何信息
+obstacle_footprints = []
+if hasattr(env, 'obstacles'):
+    for obs_id in env.obstacles:
+        try:
+            aabb_min, aabb_max = p.getAABB(obs_id)
+            obstacle_footprints.append((aabb_min, aabb_max))
+        except Exception:
+            pass
+
+wall_footprints = []
+if hasattr(env, 'wall_ids'):
+    for wall_id in env.wall_ids:
+        try:
+            aabb_min, aabb_max = p.getAABB(wall_id)
+            wall_footprints.append((aabb_min, aabb_max))
+        except Exception:
+            pass
 
 # 关闭物理引擎
 env.close()
-# yawA = env.followerA_err
-# yawB = env.followerB_err
-# steps = np.arange(len(yawA))
 
-# plt.figure(figsize=(12,5))
-
-# plt.subplot(1,2,1)
-# plt.plot(steps, yawA, label='delta_yaw_A', color='r', linewidth=1.5)
-# plt.title('delta_yaw_A 变化曲线')
-# plt.xlabel('Step')
-# plt.ylabel('Angle (rad)')
-# plt.grid(True)
-# plt.legend()
-
-# plt.subplot(1,2,2)
-# plt.plot(steps, yawB, label='delta_yaw_B', color='b', linewidth=1.5)
-# plt.title('delta_yaw_B 变化曲线')
-# plt.xlabel('Step')
-# plt.ylabel('Angle (rad)')
-# plt.grid(True)
-# plt.legend()
-
-# plt.tight_layout()
-
-# 3. 画出轨迹图 (Matplotlib 后处理)
+# 3. 独立绘制轨迹与编队形状图
 print("正在绘制轨迹图...")
-plt.figure(figsize=(10, 6)) # 调整为长方形比例，适应你的地图
+plot_trajectory_and_formation(
+    env=env,
+    all_trajectories=all_trajectories,
+    obstacle_footprints=obstacle_footprints,
+    wall_footprints=wall_footprints,
+    output_path=None,
+    show=True,
+    # title="Trajectory",
+)
 
-# 画目标点
-plt.scatter(env.target_pos[0], env.target_pos[1], c='red', marker='*', s=300, label='Target', zorder=5)
-
-# 画机器人轨迹
-# 准备颜色与标签（至少为 9 个机器人提供颜色）
-colors = ['r', 'b', 'g', 'c', 'm', 'y', 'k', '#7f7f7f', "#CE782C"]
-labels = ['Leader 1', 'Leader 2','Follower 1', 'Follower 2', 'Follower 3', 'Follower 4', 'Follower 5', 'Follower 6', 'Follower 7',]
-
-for i in range(9):
-    # 取出轨迹，防御性编程以避免 KeyError/IndexError
-    traj = all_trajectories.get(i, ([], []))
-    xs, ys = traj[0], traj[1]
-    if not xs or not ys:
-        print(f"跳过机器人 {i}：轨迹为空")
-        continue
-    color = colors[i % len(colors)]
-    # 画线
-    plt.plot(xs, ys, color=color, label=labels[i], linewidth=2)
-    # 画起点 (空心圈)
-    plt.scatter(xs[0], ys[0], c='white', edgecolors=color, s=50)
-    # 画终点 (实心圈)
-    plt.scatter(xs[-1], ys[-1], c=color, s=100)
-
-# 画出障碍物 (方便分析避障效果)
-# 假设我们知道环境里的障碍物列表 env.obstacles
-if hasattr(env, 'obstacles'):
-    for obs_id in env.obstacles:
-        pos, _ = p.getBasePositionAndOrientation(obs_id)
-        # 画一个黑色圆圈代表障碍物
-        circle = plt.Circle((pos[0], pos[1]), 0.3, color='black', alpha=0.5)
-        plt.gca().add_patch(circle)
-
-# 画出围墙范围
-wall_len = getattr(env, 'wall_length', 10.0)
-wall_wid = getattr(env, 'wall_width', 5.0)
-plt.plot([-wall_len, wall_len, wall_len, -wall_len, -wall_len], 
-         [wall_wid, wall_wid, -wall_wid, -wall_wid, wall_wid], 'k--', linewidth=2, label='Walls')
-
-plt.legend()
-plt.title("Trajectory")
-plt.xlabel("X Position (m)")
-plt.ylabel("Y Position (m)")
-plt.grid(True)
-plt.axis('equal') # 保持比例一致，否则圆会变成椭圆
-plt.show()
+# 4. 独立绘制距离统计图
+# print("正在绘制距离统计图...")
+# plot_distance_statistics(
+#     all_trajectories=all_trajectories,
+#     obstacle_footprints=obstacle_footprints,
+#     topology_edges=getattr(env, 'edges', None),
+#     show=True,
+#     output_path="./outputs/figures/distance_statistics2.png",
+#     # title="Formation Distance Statistics",
+# )

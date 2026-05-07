@@ -53,7 +53,17 @@ class FormationGraph:
             
             # === Path 3 (Yellow) ===
             triplets.append((2, 8, 7)) 
-            triplets.append((1, 7, 8)) 
+            triplets.append((1, 7, 8))
+
+
+        elif self.n_agents == 5:
+            # ==========================================
+            # 原有的 5 节点复杂拓扑
+            # ==========================================
+            # === Path 1 (Red) ===
+            triplets.append((0, 4, 2)) 
+            triplets.append((2, 3, 4)) 
+            triplets.append((1, 4, 3)) 
             
         else:
             raise ValueError(f"未定义的拓扑结构！当前智能体数量为 {self.n_agents}")

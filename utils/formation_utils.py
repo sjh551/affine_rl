@@ -185,7 +185,44 @@ def get_square_topology():
     ]
     return edges
 
+def get_five_agent_configuration():
+    """
+    返回旋转45度的正方形配置。
+    旋转是为了保证任意两个有连接的智能体，
+    其 X 方向和 Y 方向的坐标差都不为 0 (避开拉普拉斯矩阵奇异陷阱)
+    """
+    y = 1.0
+    x = 3 * y
+    g_nom = np.array([
+        [ x,  y,  0.0],       # 0: Leader 1 (顶点)
+        [ y,  -x,  np.pi/2],   # 1: Leader 2 (右点)
+        [-y,  x, -np.pi/2],   # 2: Follower 1 (左点)
+        [ -x, -y,  np.pi],      # 3: Follower 2 (底点)
+        [-0,0,0]                 # 4: 第五个智能体 (可选)
+    ])
+    # c, s = np.cos(np.pi/3), np.sin(np.pi/3)
+    # R = np.zeros((3,3))
+    # R[:2,:2] = np.array([
+    #     [c, -s], 
+    #     [s, c]
+    # ]) 
+    # R[2,2] = 1
+    # g_nom = (R @ g_nom.T).T
+    return g_nom
 
+def get_five_agent_topology():
+    """
+    构成一个长度为 2 的 DEP (Dual-Entry Path)。
+    两个入口是 Leader (0和1)，内部节点是 Follower (2和3)。
+    双向通信路径: Leader1(0) <-> Follower1(2) <-> Follower2(3) <-> Leader2(1)
+    """
+    edges = [
+        (0, 2),
+        (2, 4),
+        (4, 3),
+        (3, 1),
+    ]
+    return edges
 
 # === 测试代码 ===
 if __name__ == "__main__":

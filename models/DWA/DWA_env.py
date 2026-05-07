@@ -5,6 +5,13 @@ import pybullet as p
 import pybullet_data
 import time
 import math
+import sys
+import os
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 from utils.formation_graph import FormationGraph
 from utils.formation_utils import get_square_configuration, get_square_topology
 import itertools
@@ -235,6 +242,8 @@ class FormationPyBulletEnv(gym.Env):
         self.debug_line_ids = []
         self.ep_rew_progress = 0.0   # 进度得分
         self.ep_rew_shape = 0.0      # 队形弹簧扣分
+        self.ep_formation_err = 0.0  # 编队误差累计
+        self.ep_formation_err_max = 0.0  # 编队误差最大值
         self.ep_rew_collision = 0.0  # 碰撞扣分
         self.ep_rew_time = 0.0       # 时间扣分
         self.ep_rew_smooth = 0.0     # 平滑度得分
@@ -258,59 +267,29 @@ class FormationPyBulletEnv(gym.Env):
         vec_to_goal = self.virtual_target_pos[:2] - center_pos[:2]
         target_yaw = np.arctan2(vec_to_goal[1], vec_to_goal[0])
 
-        if len(action) == self.num_robots * 2:
-            for i in range(self.num_robots):
-                # 1. 提取該機器人在目標系下的期望速度
-                v_target_x = action[i*2] * self.max_vel
-                v_target_y = action[i*2 + 1] * self.max_vel
+        for i in range(self.num_robots):
+            # 1. 提取該機器人在目標系下的期望速度
+            v_target_x = action[i*2] * self.max_vel
+            v_target_y = action[i*2 + 1] * self.max_vel
 
-                # 2. 獲取該機器人當前的世界系航向角
-                _, quat = p.getBasePositionAndOrientation(self.robot_ids[i])
-                yaw_i = p.getEulerFromQuaternion(quat)[2]
+            # 2. 獲取該機器人當前的世界系航向角
+            _, quat = p.getBasePositionAndOrientation(self.robot_ids[i])
+            yaw_i = p.getEulerFromQuaternion(quat)[2]
 
-                # 3. 計算旋轉角度：目標系 -> 體座標系
-                # 公式：delta_yaw = target_yaw - current_yaw
-                delta_yaw = target_yaw - yaw_i
-                cos_d = np.cos(delta_yaw)
-                sin_d = np.sin(delta_yaw)
+            # 3. 計算旋轉角度：目標系 -> 體座標系
+            # 公式：delta_yaw = target_yaw - current_yaw
+            delta_yaw = target_yaw - yaw_i
+            cos_d = np.cos(delta_yaw)
+            sin_d = np.sin(delta_yaw)
 
-                # 4. 執行旋轉變換
-                vx_body = v_target_x * cos_d - v_target_y * sin_d
-                vy_body = v_target_x * sin_d + v_target_y * cos_d
+            # 4. 執行旋轉變換
+            vx_body = v_target_x * cos_d - v_target_y * sin_d
+            vy_body = v_target_x * sin_d + v_target_y * cos_d
 
-                # 5. 驅動機器人
-                self._drive_robot(self.robot_ids[i], vx_body, vy_body, 0)
+            # 5. 驅動機器人
+            self._drive_robot(self.robot_ids[i], vx_body, vy_body, 0)
         
         
-
-        else:
-            # 提取 Leader A 的线速度和角速度
-            vAx = action[0] * self.max_vel
-            vAy = action[1] * self.max_vel
-
-            # 提取 Leader B 的线速度和角速度
-            vBx = action[2] * self.max_vel
-            vBy = action[3] * self.max_vel
-
-            # print(abs(wA) + abs(wB))
-
-            vAx_body = vAx * self._cosA - vAy * self._sinA
-            vAy_body = vAx * self._sinA + vAy * self._cosA
-            vBx_body = vBx * self._cosB - vBy * self._sinB
-            vBy_body = vBx * self._sinB + vBy * self._cosB
-
-            # 驱动 leaders
-            self._drive_robot(self.robot_ids[0], vAx_body, vAy_body, 0)
-            self._drive_robot(self.robot_ids[1], vBx_body, vBy_body, 0)
-
-            # --- 2. Follower 控制 (外部算法接口) ---
-            # 获取当前所有机器人的状态传给算法
-            if self.n_followers > 0:
-                states = self._get_all_robot_states()
-                # print(f'states: {states}')
-                # 驱动 followers
-                self._control_follower(states)
-
         # --- 3. 物理仿真 (高频率) ---
         for _ in range(24): 
             p.stepSimulation()
@@ -327,6 +306,8 @@ class FormationPyBulletEnv(gym.Env):
         # 累加这一步的各项得分
         self.ep_rew_progress += reward_info['r_progress']
         self.ep_rew_shape += reward_info['r_shape']
+        self.ep_formation_err += reward_info['formation_error']
+        self.ep_formation_err_max = max(self.ep_formation_err_max, reward_info['formation_error'])
         self.ep_rew_collision += reward_info['r_collision']
         self.ep_rew_time += reward_info['r_time']
         self.ep_rew_smooth += reward_info['r_smooth']
@@ -336,6 +317,9 @@ class FormationPyBulletEnv(gym.Env):
         if done:
             info['ep_rew_progress'] = self.ep_rew_progress
             info['ep_rew_shape'] = self.ep_rew_shape
+            info['ep_formation_err'] = self.ep_formation_err
+            info['ep_formation_err_mean'] = self.ep_formation_err / max(1, self.current_step)
+            info['ep_formation_err_max'] = self.ep_formation_err_max
             info['ep_rew_collision'] = self.ep_rew_collision
             info['ep_rew_smooth'] = self.ep_rew_smooth
             info['ep_rew_time'] = self.ep_rew_time
@@ -644,6 +628,11 @@ class FormationPyBulletEnv(gym.Env):
         dist_AB = np.linalg.norm(actual_vec)
         shape_error = np.linalg.norm(actual_vec - self.nominal_vec[:2])
 
+        actual_positions = np.array([pos_A[:2], pos_B[:2]])
+        current_center = np.mean(actual_positions, axis=0)
+        desired_positions = current_center + self.g_nom[:self.num_robots, :2]
+        formation_error = float(np.mean(np.linalg.norm(actual_positions - desired_positions, axis=1)))
+
         # 4. 获取所有机器人的 2D 位置
         all_pos = [np.array(p.getBasePositionAndOrientation(rid)[0][:2]) for rid in self.robot_ids]
 
@@ -812,6 +801,7 @@ class FormationPyBulletEnv(gym.Env):
             'reason': reason,
             'r_progress': r_progress,
             'r_shape': r_shape,
+            'formation_error': formation_error,
             'r_collision': r_collision,
             'r_time': r_time,
             'r_smooth': r_smooth
@@ -883,7 +873,7 @@ class FormationPyBulletEnv(gym.Env):
 
     def _generate_obstacles(self):
         self.obstacles = []
-        self.config_id = np.random.randint(0, 5) 
+        self.config_id = 2 # np.random.randint(0, 5) 
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)

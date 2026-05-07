@@ -181,10 +181,10 @@ if __name__ == '__main__':
     TARGET_BUFFER_SIZE = 4096  # 你在 2 核时验证成功的总 Buffer (2 * 2048)
     
     # 动态计算 n_steps。32核时 n_steps=128，2核时 n_steps=2048
-    dynamic_n_steps = max(TARGET_BUFFER_SIZE // NUM_ENVS, 64) 
+    dynamic_n_steps = max(TARGET_BUFFER_SIZE // NUM_ENVS, 256) 
     
     # 动态计算 batch_size。保证网络每次更新的 batch 划分比例一致
-    # 4096 的 Buffer 配合 256 的 Batch Size，恰好划分为 16 个 minibatches
+    # 8192 的 Buffer 配合 256 的 Batch Size，恰好划分为 32 个 minibatches
     dynamic_batch_size = 256
 
 
@@ -265,9 +265,11 @@ if __name__ == '__main__':
             print(f"正在加载指定的模型作为起点: {LOAD_MODEL_NAME}")
             # 加载模型并重置一些参数 (例如增加熵系数 ent_coef 鼓励避障探索)
             model = PPO.load(model_load_path(LOAD_MODEL_NAME), env=env, 
-                             ent_coef=0.01, 
+                             ent_coef=0.001, 
                              batch_size=dynamic_batch_size, n_steps=dynamic_n_steps,
                              learning_rate=3e-5,
+                             n_epochs=5,
+                             clip_range=0.1,
                              tensorboard_log=str(TB_STAGE2_DIR), device="cuda")
 
         # 设置自动保存回调

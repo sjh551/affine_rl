@@ -33,6 +33,8 @@ def evaluate_dwa(num_episodes=100):
     stats = {"Success": 0, "Crash_Obstacle": 0, "Crash_Team": 0, "Wall_Out": 0, "Timeout": 0, "Unknown": 0}
     step_times = []  
     success_steps = []
+    formation_err_means = []
+    formation_err_maxs = []
     start_time = time.time()
     
     for episode in range(num_episodes):
@@ -60,6 +62,8 @@ def evaluate_dwa(num_episodes=100):
                 # 3. 歸一化並加入列表
                 full_action_list.extend([u_target[0] / env.max_vel, u_target[1] / env.max_vel])
 
+            
+
             # 轉化為 numpy 數組
             full_action = np.array(full_action_list, dtype=np.float32)
             
@@ -69,11 +73,18 @@ def evaluate_dwa(num_episodes=100):
             obs, reward, terminated, truncated, info = env.step(full_action)
             t1 = time.perf_counter()
             step_times.append(t1 - t0)
+            steps += 1
 
             done = terminated or truncated
             
             if done:
                 reason = info.get('reason', 'Unknown')
+                formation_err_mean = info.get('ep_formation_err_mean')
+                formation_err_max = info.get('ep_formation_err_max')
+                if formation_err_mean is not None:
+                    formation_err_means.append(formation_err_mean)
+                if formation_err_max is not None:
+                    formation_err_maxs.append(formation_err_max)
                 if "Success" in reason:
                     stats["Success"] += 1
                     success_steps.append(steps)
@@ -115,6 +126,10 @@ def evaluate_dwa(num_episodes=100):
     print(f"🏆 综合成功率: ** {success_rate:.1f}% **")
     if success_steps:
         print(f"🎯 成功回合平均步数: {np.mean(success_steps):.1f} 步")
+    if formation_err_means:
+        print(f"📐 回合平均编队误差: {np.mean(formation_err_means):.3f} m")
+    if formation_err_maxs:
+        print(f"📏 回合最大编队误差: {np.mean(formation_err_maxs):.3f} m")
     
     print("-" * 45)
     print(" ⚡ 系统性能指标 (Sim-to-Real Readiness) ")

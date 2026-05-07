@@ -20,6 +20,8 @@ def evaluate_model(model_path, num_episodes=100):
     # ==========================================
     step_times = []  
     success_steps = []
+    formation_error_avgs = []
+    formation_error_maxs = []
 
     start_time = time.time()
     
@@ -46,6 +48,10 @@ def evaluate_model(model_path, num_episodes=100):
             
             if done:
                 reason = info.get('reason', 'Unknown')
+                if 'ep_formation_error_avg' in info:
+                    formation_error_avgs.append(info['ep_formation_error_avg'])
+                if 'ep_formation_error_max' in info:
+                    formation_error_maxs.append(info['ep_formation_error_max'])
                 if "Success" in reason:
                     stats["Success"] += 1
                     success_steps.append(steps)
@@ -88,6 +94,9 @@ def evaluate_model(model_path, num_episodes=100):
     print(f"🏆 综合成功率: ** {success_rate:.1f}% **")
     if success_steps:
         print(f"🎯 成功回合平均步数: {np.mean(success_steps):.1f} 步")
+    if formation_error_avgs:
+        print(f"📐 回合平均编队误差: {np.mean(formation_error_avgs):.4f}")
+        print(f"📐 回合最大编队误差: {np.mean(formation_error_maxs):.4f}")
     
     print("-" * 45)
     print(" ⚡ 系统性能指标 (Sim-to-Real Readiness) ")
