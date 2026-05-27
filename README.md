@@ -2,7 +2,7 @@
 
 一个基于 PyBullet 的多车编队强化学习项目。
 
-## 工程目录（已整理）
+## 工程目录
 
 ```text
 Leader_Follower_RL/
@@ -38,7 +38,7 @@ Leader_Follower_RL/
 - 小车 URDF 统一放在 `assets/ranger_mini_v3/`。
 - 所有环境脚本都通过“基于文件位置的绝对路径”加载 URDF，不依赖当前工作目录。
 
-## 常用运行方式
+## 运行方式
 
 在项目根目录执行：
 
@@ -52,8 +52,7 @@ python scripts/run_train_autoencoder.py
 
 也支持直接运行原脚本（`train.py`、`test.py` 等），路径会自动解析到 `outputs/`。
 
-## 为什么这样改
+## 其他
 
-之前 `p.loadURDF("./ranger_mini_v3/..." )` 依赖启动目录，切换目录或拆分脚本后容易报找不到模型。现在改为按脚本文件位置解析路径，目录重构后仍可稳定运行。
 
 第二阶段进一步把模型、tensorboard、checkpoint、图像等全部收敛到 `outputs/`，根目录保持干净，便于版本管理和后续扩展新方法。

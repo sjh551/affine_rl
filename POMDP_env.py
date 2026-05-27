@@ -95,7 +95,7 @@ class FormationPyBulletEnv(gym.Env):
         self.half_horizon = 0.25 # 水平的一半长
         self.half_vertical = 0.19 # 垂直的一半
 
-        self.safe_margin = 1.0 # 设定的agent之间的警戒距离
+        self.safe_margin = 0.7 # 设定的agent之间的警戒距离
         self.obstacles = []
         self.max_steps = 1500
         self.wall_length = 20.0 # 墙的长度的一半
@@ -702,18 +702,6 @@ class FormationPyBulletEnv(gym.Env):
 
         # A. 速度朝向一致性 (距离目标较远时鼓励朝向目标)
 
-        # if speed_A > 0.1:
-        #     dot_A = np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal)
-        #     # 使用 e^(1 - dot) - 1.0
-        #     # dot=1 (正向)  -> e^0 - 1 = 0 
-        #     # dot=0 (侧向)  -> e^1 - 1 ≈ 1.71
-        #     # dot=-1 (背向) -> e^2 - 1 ≈ 6.38 (暴击惩罚！)
-        #     r_smooth -= self.k_vel_align * 1/(1 + np.exp(-5*(dist_to_goal-2.0))) * (np.exp(1.0 - dot_A) - 1.0)
-            
-        # if speed_B > 0.1:
-        #     dot_B = np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal)
-        #     r_smooth -= self.k_vel_align * 1/(1 + np.exp(-5*(dist_to_goal-2.0))) * (np.exp(1.0 - dot_B) - 1.0)
-
         if dist_to_goal > 2.0:
             if speed_A > 0.1:
                 r_smooth -= self.k_vel_align * (1.0 - np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal))
@@ -745,33 +733,33 @@ class FormationPyBulletEnv(gym.Env):
         k_repulsion_base = 0.1   # 势场排斥力基数
         
         # 预先推算 Followers 估计位置 (用于避障预警)
-        estimated_team_positions = []
-        if self.n_followers > 0 and self.enable_obstacles:
-            pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A) # 推算领导者下一步的位置
-            pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
-            p_leader_pre_flat = np.concatenate([pre_A, pre_B])
+        # estimated_team_positions = []
+        # if self.n_followers > 0 and self.enable_obstacles:
+        #     pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A) # 推算领导者下一步的位置
+        #     pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
+        #     p_leader_pre_flat = np.concatenate([pre_A, pre_B])
 
-            p_leader_current_flat = np.concatenate([[all_pos[0][0], all_pos[0][1], yaw_A], [all_pos[1][0], all_pos[1][1], yaw_B]])
+        #     p_leader_current_flat = np.concatenate([[all_pos[0][0], all_pos[0][1], yaw_A], [all_pos[1][0], all_pos[1][1], yaw_B]])
     
-            p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_pre_flat
-            p_follower_expected = -self.M_ff_inv @ self.M_fl @ p_leader_current_flat    # calculates the current expected follower' positions
+        #     p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_pre_flat
+        #     p_follower_expected = -self.M_ff_inv @ self.M_fl @ p_leader_current_flat    # calculates the current expected follower' positions
 
-            for i in range(self.n_followers):
-                est_pos = np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]])    # 取出预测的位置
-                expected_pos = np.array([p_follower_expected[i*3], p_follower_expected[i*3 + 1]])
-                actual_pos = all_pos[i + 2]
-                error_dist = np.linalg.norm(actual_pos - expected_pos)
-                formation_error_step += error_dist
-                tolerance = 0.5 # 允许一定的误差范围，超过这个范围才扣分
-                if error_dist > tolerance:
-                    r_collision -= 1.0 * (error_dist - tolerance)
-                    # print(f"Follower {i} deformation error: {error_dist:.2f}, r_collision: {r_collision:.2f}")
+        #     for i in range(self.n_followers):
+        #         est_pos = np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]])    # 取出预测的位置
+        #         expected_pos = np.array([p_follower_expected[i*3], p_follower_expected[i*3 + 1]])
+        #         actual_pos = all_pos[i + 2]
+        #         error_dist = np.linalg.norm(actual_pos - expected_pos)
+        #         formation_error_step += error_dist
+        #         tolerance = 0.5 # 允许一定的误差范围，超过这个范围才扣分
+        #         if error_dist > tolerance:
+        #             r_collision -= 5.0 * (error_dist - tolerance)
+        #             # print(f"Follower {i} deformation error: {error_dist:.2f}, r_collision: {r_collision:.2f}")
 
-                min_dist, _  = self._get_obstacle_repulsion(est_pos)   # 计算离最近的位置
-                if min_dist < self.safe_margin:
-                    cost  = 3.0 *(self.safe_margin - min_dist)   # 离得越近，惩罚越大
-                    # print(cost)
-                    r_collision -=  cost
+        #         min_dist, _  = self._get_obstacle_repulsion(est_pos)   # 计算离最近的位置
+        #         if min_dist < self.safe_margin:
+        #             cost  = 10.0 *(self.safe_margin - min_dist)   # 离得越近，惩罚越大
+        #             # print(cost)
+        #             r_collision -=  cost
 
         # print(r_collision)
 
@@ -797,8 +785,8 @@ class FormationPyBulletEnv(gym.Env):
 
         # C. 障碍物碰撞与斥力势场
         if self.enable_obstacles and not done:
-            crash_threshold = 0.05  # 表面距离小于 5cm 认为撞毁
-            warn_threshold = 0.35   # 表面距离小于 35cm 开始施加斥力       
+            crash_threshold = 0.03  # 表面距离小于 3cm 认为撞毁
+            warn_threshold = 0.50   # 表面距离小于 50cm 开始施加斥力       
             
             # 遍历所有机器人
             for i, robot_id in enumerate(self.robot_ids):

@@ -15,7 +15,7 @@ DATASET_100K_PATH = DATA_DIR / "lidar_dataset_100k.npy"
 PRETRAINED_ENCODER_PATH = AUTOENCODER_DIR / "pretrained_encoder.pth"
 
 MODEL_STAGE1_NAME = "ppo2_stage1_nav"
-MODEL_FINAL_NAME = "ppo2_final_leader-stage3-1100w" #"ppo2_final_leader2阶段-300wsteps" #"ppo2_final_leader-best"
+MODEL_FINAL_NAME = "ppo2_final_leader-best" #"ppo2_final_leader-origin-23训练500w" #"ppo2_final_leader2阶段-300wsteps" #"ppo2_final_leader-best"
 
 
 def ensure_output_dirs() -> None:
