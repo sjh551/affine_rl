@@ -17,7 +17,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf", "ranger_mini.urdf").replace("\\", "/")
 
 class FormationPyBulletEnv(gym.Env):
-    def __init__(self, render_mode=False, enable_obstacles=True, hide_robots=False, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
+    def __init__(self, render_mode=False, enable_obstacles=True, enable_followers=True, hide_robots=False, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
                  k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
         super(FormationPyBulletEnv, self).__init__()
         
@@ -42,8 +42,11 @@ class FormationPyBulletEnv(gym.Env):
         
         # --- 参数配置 ---
         self.n_leaders = 2
+        # Keep two follower slots in every stage so PPO observation spaces match.
         self.n_followers = 2
-        self.num_robots = self.n_leaders + self.n_followers 
+        self.enable_followers = enable_followers
+        self.active_n_followers = self.n_followers if enable_followers else 0
+        self.num_robots = self.n_leaders + self.active_n_followers
         self.robot_ids = []
         
 
@@ -307,7 +310,7 @@ class FormationPyBulletEnv(gym.Env):
 
         # --- 2. Follower 控制 (外部算法接口) ---
         # 获取当前所有机器人的状态传给算法
-        if self.n_followers > 0:
+        if self.active_n_followers > 0:
             states = self._get_all_robot_states()
             # print(f'states: {states}')
             # 驱动 followers
@@ -408,12 +411,12 @@ class FormationPyBulletEnv(gym.Env):
         
         # 3. 解析回各个机器人的 3D 速度并安全限幅
         follower_vels = []
-        for i in range(self.n_followers):
+        for i in range(self.active_n_followers):
             vel_3d = np.array(v_f_flat[i*3 : i*3+3]) # shape: (3,)
             follower_vels.append(vel_3d)
 
         # 4. 世界坐标系 -> 体坐标系 转换与驱动
-        for idx in range(self.n_followers):
+        for idx in range(self.active_n_followers):
             robot_id = self.robot_ids[idx + 2]
 
             _, APF_vel = self._get_obstacle_repulsion(states[idx + 2]['pos'][:2])
@@ -602,6 +605,11 @@ class FormationPyBulletEnv(gym.Env):
                 np.cos(follower_delta_yaw),
                 follower_angular_vel[2],
             ])
+
+        missing_followers = self.n_followers - self.active_n_followers
+        follower_kinematics.extend(
+            [0.0] * (missing_followers * self.follower_state_dim)
+        )
 
         lidar_A = self._get_lidar(pA, target_yaw, self.n_lidar_rays, self.lidar_range)
         lidar_B = self._get_lidar(pB, target_yaw, self.n_lidar_rays, self.lidar_range)
@@ -915,7 +923,7 @@ class FormationPyBulletEnv(gym.Env):
         line_color = [1, 1, 0] 
         
         # 如果只有两个 Leader，就只画它们俩之间的连线
-        if self.n_followers == 0:
+        if self.active_n_followers == 0:
             edges = [(0, 1)]
         else:
             # 原有的 9 智能体连线
