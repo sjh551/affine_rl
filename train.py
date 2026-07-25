@@ -29,7 +29,7 @@ from POMDP_env import FormationPyBulletEnv
 # 🛠️ 超参数与流程控制中心
 # ======================================================================
 # 1. 训练配置
-NUM_ENVS = 2               # 并行环境数
+NUM_ENVS = 8               # 并行环境数
 START_STAGE = 1            # 🚩 选择开始阶段: 1 (无障碍) 或 2 (有障碍)
 
 # 2. 模型加载配置
@@ -41,8 +41,8 @@ START_FROM_SCRATCH = True
 LOAD_MODEL_NAME = "ppo2_stage1_nav" 
 
 # 3. 训练长度
-TIMESTEPS_STAGE1 = 500000
-TIMESTEPS_STAGE2 = 5000000
+TIMESTEPS_STAGE1 = 3000000
+TIMESTEPS_STAGE2 = 1500000
 # ======================================================================
 
 
@@ -178,14 +178,25 @@ def create_vectorized_env(num_envs, enable_obstacles=False):
 if __name__ == '__main__':
     ensure_output_dirs()
 
-    TARGET_BUFFER_SIZE = 4096  # 你在 2 核时验证成功的总 Buffer (2 * 2048)
-    
-    # 动态计算 n_steps。32核时 n_steps=128，2核时 n_steps=2048
-    dynamic_n_steps = max(TARGET_BUFFER_SIZE // NUM_ENVS, 256) 
-    
-    # 动态计算 batch_size。保证网络每次更新的 batch 划分比例一致
-    # 8192 的 Buffer 配合 256 的 Batch Size，恰好划分为 32 个 minibatches
+    TARGET_BUFFER_SIZE = 4096
     dynamic_batch_size = 256
+
+    dynamic_n_steps = TARGET_BUFFER_SIZE // NUM_ENVS
+
+    actual_buffer_size = NUM_ENVS * dynamic_n_steps
+
+    assert actual_buffer_size % dynamic_batch_size == 0, (
+        f"rollout buffer={actual_buffer_size} 不能被 "
+        f"batch_size={dynamic_batch_size} 整除"
+    )
+
+    print(f"并行环境数: {NUM_ENVS}")
+    print(f"每个环境采样步数: {dynamic_n_steps}")
+    print(f"Rollout Buffer: {actual_buffer_size}")
+    print(f"Batch Size: {dynamic_batch_size}")
+    print(f"每轮 Minibatch 数: {actual_buffer_size // dynamic_batch_size}")
+
+    
 
 
 

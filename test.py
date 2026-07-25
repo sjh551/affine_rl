@@ -10,16 +10,20 @@ from project_paths import MODEL_FINAL_NAME, model_load_path, MODEL_STAGE1_NAME
 from draw.trajectory_formation_plot import plot_trajectory_and_formation
 from draw.distance_statistics_plot import plot_distance_statistics
 
-plt.rcParams['font.family'] = ['Times New Roman', 'SimSun']
+plt.rcParams['font.family'] = [
+    'Times New Roman',
+    'Noto Sans CJK SC',
+    'DejaVu Sans',
+]
 plt.rcParams['axes.unicode_minus'] = False
 
 
 # 1. 加载环境和模型
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=True)
+
 # 尝试加载模型，如果没有模型文件，就随机
 try:
-    # model = PPO.load(model_load_path(MODEL_STAGE1_NAME), env=env)
-    model = PPO.load(model_load_path(MODEL_FINAL_NAME), env=env)
+    # model = PPO.load(model_load_path(MODEL_STAGE1_NAME))
+    model = PPO.load(model_load_path(MODEL_FINAL_NAME))
     print("✅ 成功加载 RL 模型！")
     # 打印 CUDA 状态和模型所在设备
     try:
@@ -43,6 +47,7 @@ except:
     print("⚠️ 未找到模型文件，将使用随机动作进行测试...")
     use_rl = False
 
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False)
 # 2. 跑一局测试
 # 兼容 Gym / Gymnasium：env.reset() 可能返回 obs 或 (obs, info)
 res = env.reset()

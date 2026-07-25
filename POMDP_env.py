@@ -709,17 +709,24 @@ class FormationPyBulletEnv(gym.Env):
                 r_smooth -= self.k_vel_align * (1.0 - np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal))
         
         # A. 动作变化率惩罚 (防抽搐)
-        # dvA_linear = np.linalg.norm(action_diff[0:2])
-        # dvB_linear = np.linalg.norm(action_diff[2:4])
-        # r_smooth -= self.k_smooth_linear * (dvA_linear + dvB_linear)
+        # Penalize abrupt command changes. Squared norms strongly discourage
+        # the observed -1/+1 lateral bang-bang switching.
+        # dvA_linear_sq = np.dot(action_diff[0:2], action_diff[0:2])
+        # dvB_linear_sq = np.dot(action_diff[2:4], action_diff[2:4])
+        # r_smooth -= self.k_smooth_linear * (dvA_linear_sq + dvB_linear_sq)
+
+        # Prefer forward motion in the target-aligned action frame. This is a
+        # soft cost, so lateral motion remains available for obstacle avoidance.
+        # lateral_action_cost = action[1] ** 2 + action[3] ** 2
+        # r_smooth -= 0.1 * lateral_action_cost
 
 
         # B. 路径横向偏差惩罚 (Cross Track Error)
-        R_vec = center_pos[:2] - self.start_center[:2]
-        cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
-        cte = cross_product / self.L_norm
-        # print(cte)
-        r_smooth -= self.k_path_cost * cte
+        # R_vec = center_pos[:2] - self.start_center[:2]
+        # cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
+        # cte = cross_product / self.L_norm
+        # # print(cte)
+        # r_smooth -= self.k_path_cost * cte
 
 
         # =========================================================
@@ -733,33 +740,33 @@ class FormationPyBulletEnv(gym.Env):
         k_repulsion_base = 0.1   # 势场排斥力基数
         
         # 预先推算 Followers 估计位置 (用于避障预警)
-        # estimated_team_positions = []
-        # if self.n_followers > 0 and self.enable_obstacles:
-        #     pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A) # 推算领导者下一步的位置
-        #     pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
-        #     p_leader_pre_flat = np.concatenate([pre_A, pre_B])
+        estimated_team_positions = []
+        if self.n_followers > 0 and self.enable_obstacles:
+            pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A) # 推算领导者下一步的位置
+            pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
+            p_leader_pre_flat = np.concatenate([pre_A, pre_B])
 
-        #     p_leader_current_flat = np.concatenate([[all_pos[0][0], all_pos[0][1], yaw_A], [all_pos[1][0], all_pos[1][1], yaw_B]])
+            p_leader_current_flat = np.concatenate([[all_pos[0][0], all_pos[0][1], yaw_A], [all_pos[1][0], all_pos[1][1], yaw_B]])
     
-        #     p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_pre_flat
-        #     p_follower_expected = -self.M_ff_inv @ self.M_fl @ p_leader_current_flat    # calculates the current expected follower' positions
+            p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_pre_flat
+            p_follower_expected = -self.M_ff_inv @ self.M_fl @ p_leader_current_flat    # calculates the current expected follower' positions
 
-        #     for i in range(self.n_followers):
-        #         est_pos = np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]])    # 取出预测的位置
-        #         expected_pos = np.array([p_follower_expected[i*3], p_follower_expected[i*3 + 1]])
-        #         actual_pos = all_pos[i + 2]
-        #         error_dist = np.linalg.norm(actual_pos - expected_pos)
-        #         formation_error_step += error_dist
-        #         tolerance = 0.5 # 允许一定的误差范围，超过这个范围才扣分
-        #         if error_dist > tolerance:
-        #             r_collision -= 5.0 * (error_dist - tolerance)
-        #             # print(f"Follower {i} deformation error: {error_dist:.2f}, r_collision: {r_collision:.2f}")
+            for i in range(self.n_followers):
+                est_pos = np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]])    # 取出预测的位置
+                expected_pos = np.array([p_follower_expected[i*3], p_follower_expected[i*3 + 1]])
+                actual_pos = all_pos[i + 2]
+                error_dist = np.linalg.norm(actual_pos - expected_pos)
+                formation_error_step += error_dist
+                tolerance = 0.5 # 允许一定的误差范围，超过这个范围才扣分
+                if error_dist > tolerance:
+                    r_collision -= 5.0 * (error_dist - tolerance)
+                    # print(f"Follower {i} deformation error: {error_dist:.2f}, r_collision: {r_collision:.2f}")
 
-        #         min_dist, _  = self._get_obstacle_repulsion(est_pos)   # 计算离最近的位置
-        #         if min_dist < self.safe_margin:
-        #             cost  = 10.0 *(self.safe_margin - min_dist)   # 离得越近，惩罚越大
-        #             # print(cost)
-        #             r_collision -=  cost
+                min_dist, _  = self._get_obstacle_repulsion(est_pos)   # 计算离最近的位置
+                if min_dist < self.safe_margin:
+                    cost  = 10.0 *(self.safe_margin - min_dist)   # 离得越近，惩罚越大
+                    # print(cost)
+                    r_collision -=  cost
 
         # print(r_collision)
 
@@ -836,7 +843,6 @@ class FormationPyBulletEnv(gym.Env):
         # =========================================================
         # [6] 汇总与返回
         # =========================================================
-        r_smooth = 0.1 * r_smooth
         reward = r_progress + r_shape + r_collision + r_time + r_smooth
 
         if done and reason == "Success":
@@ -919,7 +925,7 @@ class FormationPyBulletEnv(gym.Env):
 
     def _generate_obstacles(self):
         self.obstacles = []
-        config_id = np.random.randint(1, 3) #np.random.choice([0,3,4])
+        config_id = 0#np.random.randint(0, 5) #np.random.choice([0,3,4])
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)

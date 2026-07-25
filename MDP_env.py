@@ -67,7 +67,10 @@ class FormationPyBulletEnv(gym.Env):
         self.lidar_buffer_B = deque(maxlen=self.frame_len)
 
         # 运动学特征 (距离, 相对向量, 速度, 姿态) 
-        kinematics_dim = 2 + 4 + 4 + 6 + 2 + 4 # 6 表示sin(),cos(),以及当前的角速度w x 2，-1 表示我们把目标的 Y 轴坐标去掉了 + 2 表示期望向量 + 上一时刻的动作
+        # Base leader/goal features: 22. Each follower contributes
+        # [relative x/y, velocity x/y, sin(yaw error), cos(yaw error), yaw rate].
+        self.follower_state_dim = 7
+        kinematics_dim = 22 + self.n_followers * self.follower_state_dim
 
         self.observation_space = spaces.Dict({
             # 基础运动学状态 (1D 向量)
@@ -138,7 +141,7 @@ class FormationPyBulletEnv(gym.Env):
         self._create_walls()
 
         # --- 随机生成目标点 ---
-        tx = np.random.uniform(self.wall_length-6.5, self.wall_length-6.0)
+        tx = np.random.uniform(self.wall_length-4.5, self.wall_length-4.0)
         ty = np.random.uniform(-self.wall_width+6.0, self.wall_width-6.0)
         self.target_pos = np.array([tx, ty, 0])
         self._create_visual_sphere(self.target_pos, [0, 1, 0, 0.5])
@@ -169,6 +172,16 @@ class FormationPyBulletEnv(gym.Env):
             spawn_quat = p.getQuaternionFromEuler([0, 0, yaw])
 
             rid = p.loadURDF(RANGER_URDF_PATH, basePosition=spawn_pos, baseOrientation=spawn_quat)
+
+            # 前两台 Leader 车身设为浅绿色，后续机器人保持模型默认颜色
+            if i < self.n_leaders:
+                light_green = [0.65, 0.9, 0.65, 1.0]
+                p.changeVisualShape(objectUniqueId=rid, linkIndex=-1, rgbaColor=light_green)
+                for link_idx in range(p.getNumJoints(rid)):
+                    # 轮子和转向机构保留原色，只改车身相关链接
+                    if link_idx in self.wheel_indices or link_idx in self.steer_indices:
+                        continue
+                    p.changeVisualShape(objectUniqueId=rid, linkIndex=link_idx, rgbaColor=light_green)
             
             # 如果隐藏小车，设置其透明度为 0
             if self.hide_robots:
@@ -250,6 +263,8 @@ class FormationPyBulletEnv(gym.Env):
         self.ep_rew_collision = 0.0  # 碰撞扣分
         self.ep_rew_time = 0.0       # 时间扣分
         self.ep_rew_smooth = 0.0     # 平滑度得分
+        self.ep_formation_error_sum = 0.0
+        self.ep_formation_error_max = 0.0
         obs = self._get_obs(center_pos)
 
         self.is_frame_locked = False
@@ -262,7 +277,7 @@ class FormationPyBulletEnv(gym.Env):
         # 当前动作为小车目标坐标系下的动作，不是小车自身坐标系的动作
         self.current_step += 1
 
-        center_pos = self._get_center_pos()
+        # Reward and next observation must use the post-action center.
         # vec_to_goal = self.target_pos[:2] - center_pos[:2]
         # dist_to_goal = np.linalg.norm(vec_to_goal)
 
@@ -308,8 +323,9 @@ class FormationPyBulletEnv(gym.Env):
             time.sleep(0.01)
             
         # --- 5. 获取状态与计算奖励 ---
-        obs = self._get_obs(center_pos)
-        reward, reward_info = self._compute_reward(center_pos,action,action_diff)
+        new_center_pos = self._get_center_pos()
+        obs = self._get_obs(new_center_pos)
+        reward, reward_info = self._compute_reward(new_center_pos,action,action_diff)
 
         # 累加这一步的各项得分
         self.ep_rew_progress += reward_info['r_progress']
@@ -317,6 +333,11 @@ class FormationPyBulletEnv(gym.Env):
         self.ep_rew_collision += reward_info['r_collision']
         self.ep_rew_time += reward_info['r_time']
         self.ep_rew_smooth += reward_info['r_smooth']
+        self.ep_formation_error_sum += reward_info['formation_error_step']
+        self.ep_formation_error_max = max(
+            self.ep_formation_error_max,
+            reward_info['formation_error_step'],
+        )
         done = reward_info['done']
         # print(f"Step: {self.current_step}, Reward: {reward:.3f}, Progress: {reward_info['r_progress']:.3f}, Shape: {reward_info['r_shape']:.3f}, Collision: {reward_info['r_collision']:.3f}, Time: {reward_info['r_time']:.3f}, Smooth: {reward_info['r_smooth']:.3f}")
         info = {}
@@ -326,6 +347,10 @@ class FormationPyBulletEnv(gym.Env):
             info['ep_rew_collision'] = self.ep_rew_collision
             info['ep_rew_smooth'] = self.ep_rew_smooth
             info['ep_rew_time'] = self.ep_rew_time
+            info['ep_formation_error_avg'] = (
+                self.ep_formation_error_sum / max(self.current_step, 1)
+            )
+            info['ep_formation_error_max'] = self.ep_formation_error_max
             info['reason'] = reward_info.get('reason', 'Unknown')
 
         # 更新上一帧速度
@@ -556,6 +581,28 @@ class FormationPyBulletEnv(gym.Env):
         
 
         # 分别获取 A, B 身边的障碍物特征
+        # Expose every follower exact state to the centralized leader policy.
+        # All planar vectors use the same target-aligned frame as leader features.
+        follower_kinematics = []
+        for robot_id in self.robot_ids[self.n_leaders:]:
+            follower_pos, follower_quat = p.getBasePositionAndOrientation(robot_id)
+            follower_vel, follower_angular_vel = p.getBaseVelocity(robot_id)
+            follower_yaw = p.getEulerFromQuaternion(follower_quat)[2]
+
+            follower_pos_body = R @ (np.asarray(follower_pos[:2]) - center_pos) # R 是将世界坐标系转到目标坐标系下
+            follower_vel_body = R @ np.asarray(follower_vel[:2])
+            follower_delta_yaw = target_yaw - follower_yaw
+
+            follower_kinematics.extend([
+                follower_pos_body[0] / self.wall_length,
+                follower_pos_body[1] / self.wall_width,
+                follower_vel_body[0],
+                follower_vel_body[1],
+                np.sin(follower_delta_yaw),
+                np.cos(follower_delta_yaw),
+                follower_angular_vel[2],
+            ])
+
         lidar_A = self._get_lidar(pA, target_yaw, self.n_lidar_rays, self.lidar_range)
         lidar_B = self._get_lidar(pB, target_yaw, self.n_lidar_rays, self.lidar_range)
 
@@ -605,7 +652,10 @@ class FormationPyBulletEnv(gym.Env):
 
             # 让网络拥有肌肉记忆
             self.last_action[0], self.last_action[1], 
-            self.last_action[2], self.last_action[3]
+            self.last_action[2], self.last_action[3],
+
+            # Exact follower states (7 values per follower).
+            *follower_kinematics,
         
         ],dtype=np.float32)
         # 返回字典结构
@@ -620,6 +670,7 @@ class FormationPyBulletEnv(gym.Env):
         reward = 0
         done = False
         reason = ""
+        formation_error_step = 0.0
 
         # --- 1. 进度奖励 ---
         vec_to_goal = self.target_pos[:2] - center_pos[:2]
@@ -668,15 +719,9 @@ class FormationPyBulletEnv(gym.Env):
         # =========================================================
         r_shape = 0.0
 
-        # B. 奇异性避免与通信断连 这部分也没有用
-        # if dist_AB < self.safe_margin + 0.2:
-        #     r_shape -= 2.0  # 靠得太近极度危险
-        # elif dist_AB > 11.0:
-        #     r_shape -= (dist_AB - 11.0) * self.k_disconnect
-
-        # C. 目标点附近形状约束
-        if shape_error > 2.0:
-            r_shape -= (-1/(1 + np.exp(-2*(dist_to_goal-4.0))) + 1) * self.k_shape_err * shape_error
+        # 目标点附近形状约束
+        if dist_to_goal < 5.0 and shape_error > 2.0:
+            r_shape -= self.k_shape_err * shape_error
         # print(r_shape)
 
 
@@ -687,22 +732,24 @@ class FormationPyBulletEnv(gym.Env):
 
         # A. 速度朝向一致性 (距离目标较远时鼓励朝向目标)
 
-        if speed_A > 0.1:
-            dot_A = np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal)
-            # 使用 e^(1 - dot) - 1.0
-            # dot=1 (正向)  -> e^0 - 1 = 0 
-            # dot=0 (侧向)  -> e^1 - 1 ≈ 1.71
-            # dot=-1 (背向) -> e^2 - 1 ≈ 6.38 (暴击惩罚！)
-            r_smooth -= self.k_vel_align * 1/(1 + np.exp(-5*(dist_to_goal-2.0))) * (np.exp(1.0 - dot_A) - 1.0)
-            
-        if speed_B > 0.1:
-            dot_B = np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal)
-            r_smooth -= self.k_vel_align * 1/(1 + np.exp(-5*(dist_to_goal-2.0))) * (np.exp(1.0 - dot_B) - 1.0)
+        if dist_to_goal > 2.0:
+            if speed_A > 0.1:
+                r_smooth -= self.k_vel_align * (1.0 - np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal))
+            if speed_B > 0.1:
+                r_smooth -= self.k_vel_align * (1.0 - np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal))
         
         # A. 动作变化率惩罚 (防抽搐)
-        # dvA_linear = np.linalg.norm(action_diff[0:2])
-        # dvB_linear = np.linalg.norm(action_diff[2:4])
-        # r_smooth -= self.k_smooth_linear * (dvA_linear + dvB_linear)
+        # dvA_linear_sq = np.dot(action_diff[0:2], action_diff[0:2])
+        # dvB_linear_sq = np.dot(action_diff[2:4], action_diff[2:4])
+        # r_smooth -= self.k_smooth_linear * (dvA_linear_sq + dvB_linear_sq)
+
+        # lateral_action_cost = action[1] ** 2 + action[3] ** 2
+        # r_smooth -= 0.1 * lateral_action_cost
+
+        # R_vec = center_pos[:2] - self.start_center[:2]
+        # cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
+        # cte = cross_product / self.L_norm
+        # r_smooth -= self.k_path_cost * cte
 
 
         # # B. 路径横向偏差惩罚 (Cross Track Error)
@@ -725,7 +772,8 @@ class FormationPyBulletEnv(gym.Env):
         
         # 预先推算 Followers 估计位置 (用于避障预警)
         # estimated_team_positions = []
-        if self.n_followers > 0 and self.enable_obstacles:
+        # Disabled to match the current POMDP reward definition.
+        if False and self.n_followers > 0 and self.enable_obstacles:
             pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A)
             pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
             p_leader_pre_flat = np.concatenate([pre_A, pre_B])
@@ -785,6 +833,8 @@ class FormationPyBulletEnv(gym.Env):
         if self.enable_obstacles and not done:
             crash_threshold = 0.05  # 表面距离小于 5cm 认为撞毁
             warn_threshold = 0.35   # 表面距离小于 35cm 开始施加斥力       
+            crash_threshold = 0.03
+            warn_threshold = 0.50
             
             # 遍历所有机器人
             for i, robot_id in enumerate(self.robot_ids):
@@ -834,7 +884,6 @@ class FormationPyBulletEnv(gym.Env):
         # =========================================================
         # [6] 汇总与返回
         # =========================================================
-        r_smooth = 0.1 * r_smooth
         reward = r_progress + r_shape + r_collision + r_time + r_smooth
 
         if done and reason == "Success":
@@ -847,7 +896,8 @@ class FormationPyBulletEnv(gym.Env):
             'r_shape': r_shape,
             'r_collision': r_collision,
             'r_time': r_time,
-            'r_smooth': r_smooth
+            'r_smooth': r_smooth,
+            'formation_error_step': formation_error_step
         }
         return reward, reward_info
     
@@ -916,7 +966,7 @@ class FormationPyBulletEnv(gym.Env):
 
     def _generate_obstacles(self):
         self.obstacles = []
-        config_id = np.random.randint(0, 5) 
+        config_id = np.random.randint(1, 3)
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)
@@ -1074,7 +1124,7 @@ class FormationPyBulletEnv(gym.Env):
         计算编队中心点，只算了领导者，感觉算了跟随者不好估计
         """
         pos_list = []
-        for robot_id in self.robot_ids[:self.n_leaders]:
+        for robot_id in self.robot_ids[:self.num_robots]:
             pos, _ = p.getBasePositionAndOrientation(robot_id)
             pos_list.append(np.array(pos))
         center = np.mean(pos_list, axis=0)
