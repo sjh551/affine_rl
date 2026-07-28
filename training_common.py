@@ -94,6 +94,12 @@ class TensorboardRewardCallback(BaseCallback):
             "ep_rew_smooth",
             "ep_rew_time",
         )
+        outcome_keys = {
+            "crash_team_rate": "outcome_crash_team",
+            "crash_obstacle_rate": "outcome_crash_obstacle",
+            "wall_out_rate": "outcome_wall_out",
+            "timeout_rate": "outcome_timeout",
+        }
 
         for info in self.locals.get("infos", []):
             if "ep_rew_progress" not in info:
@@ -109,6 +115,11 @@ class TensorboardRewardCallback(BaseCallback):
                 "custom_metrics/success_rate",
                 float(info.get("reason") == "Success"),
             )
+            for metric_name, info_key in outcome_keys.items():
+                self.logger.record_mean(
+                    f"custom_outcomes/{metric_name}",
+                    float(info.get(info_key, 0.0)),
+                )
             if "ep_formation_error_avg" in info:
                 self.logger.record_mean(
                     "custom_metrics/formation_error_avg",

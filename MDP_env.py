@@ -354,7 +354,14 @@ class FormationPyBulletEnv(gym.Env):
                 self.ep_formation_error_sum / max(self.current_step, 1)
             )
             info['ep_formation_error_max'] = self.ep_formation_error_max
-            info['reason'] = reward_info.get('reason', 'Unknown')
+            reason = reward_info.get('reason', 'Unknown')
+            info['reason'] = reason
+            info['outcome_crash_team'] = float(reason == 'Crash_Team')
+            info['outcome_crash_obstacle'] = float(
+                reason.startswith('Crash_Obstacle')
+            )
+            info['outcome_wall_out'] = float(reason.startswith('Wall_Out'))
+            info['outcome_timeout'] = float(reason == 'Timeout')
 
         # 更新上一帧速度
         for i, rid in enumerate(self.robot_ids):
@@ -779,9 +786,7 @@ class FormationPyBulletEnv(gym.Env):
         k_repulsion_base = 0.1   # 势场排斥力基数
         
         # 预先推算 Followers 估计位置 (用于避障预警)
-        # estimated_team_positions = []
-        # Disabled to match the current POMDP reward definition.
-        if False and self.n_followers > 0 and self.enable_obstacles:
+        if self.active_n_followers > 0 and self.enable_obstacles:
             pre_A = self._forward_motion(all_pos[0], vA_vec, yaw_A)
             pre_B = self._forward_motion(all_pos[1], vB_vec, yaw_B)
             p_leader_pre_flat = np.concatenate([pre_A, pre_B])
@@ -791,20 +796,21 @@ class FormationPyBulletEnv(gym.Env):
             p_follower_est_flat = -self.M_ff_inv @ self.M_fl @ p_leader_pre_flat
             p_follower_expected = -self.M_ff_inv @ self.M_fl @ p_leader_current_flat    # calculates the current expected follower' positions
 
-            for i in range(self.n_followers):
+            for i in range(self.active_n_followers):
                 est_pos = np.array([p_follower_est_flat[i*3], p_follower_est_flat[i*3 + 1]])    # 取出预测的位置
                 expected_pos = np.array([p_follower_expected[i*3], p_follower_expected[i*3 + 1]])
-                actual_pos = all_pos[i + 2]
+                actual_pos = all_pos[i + self.n_leaders]
                 error_dist = np.linalg.norm(actual_pos - expected_pos)
-                tolerance = 0.2 # 允许一定的误差范围，超过这个范围才扣分
+                formation_error_step += error_dist
+                tolerance = 0.5 # 允许一定的误差范围，超过这个范围才扣分
                 if error_dist > tolerance:
                     r_collision -= 5.0 * (error_dist - tolerance)
                     # print(f"Follower {i} deformation error: {error_dist:.2f}, r_collision: {r_collision:.2f}")
 
                 min_dist, _  = self._get_obstacle_repulsion(est_pos)   # 计算离最近的位置
                 if min_dist < self.safe_margin:
-                    cost  = (self.safe_margin - min_dist)   # 离得越近，惩罚越大
-                    r_collision -= 10 * cost
+                    cost = 10.0 * (self.safe_margin - min_dist)   # 离得越近，惩罚越大
+                    r_collision -= cost
         # print(r_collision)
             
             # current_A = np.array([p_follower_est_flat[0*3], p_follower_est_flat[0*3 + 1]])

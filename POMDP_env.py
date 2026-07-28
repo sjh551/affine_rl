@@ -348,7 +348,14 @@ class FormationPyBulletEnv(gym.Env):
             info['ep_rew_time'] = self.ep_rew_time
             info['ep_formation_error_avg'] = self.ep_formation_error_sum / max(self.current_step, 1)
             info['ep_formation_error_max'] = self.ep_formation_error_max
-            info['reason'] = reward_info.get('reason', 'Unknown')
+            reason = reward_info.get('reason', 'Unknown')
+            info['reason'] = reason
+            info['outcome_crash_team'] = float(reason == 'Crash_Team')
+            info['outcome_crash_obstacle'] = float(
+                reason.startswith('Crash_Obstacle')
+            )
+            info['outcome_wall_out'] = float(reason.startswith('Wall_Out'))
+            info['outcome_timeout'] = float(reason == 'Timeout')
 
         # 更新上一帧速度
         for i, rid in enumerate(self.robot_ids):
