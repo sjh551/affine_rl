@@ -174,7 +174,7 @@ def build_stage_configs(
         2: {
             "enable_obstacles": True,
             "enable_followers": False,
-            "timesteps": 5_000_000,
+            "timesteps": 3_000_000,
             "tensorboard_dir": stage2_tensorboard_dir,
             "model_name": stage2_model,
             "default_resume": stage1_model,

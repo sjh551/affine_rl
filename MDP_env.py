@@ -974,7 +974,7 @@ class FormationPyBulletEnv(gym.Env):
 
     def _generate_obstacles(self):
         self.obstacles = []
-        config_id = np.random.randint(1, 3)
+        config_id = np.random.randint(0, 5)
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)

@@ -52,7 +52,7 @@ python train.py --stage 2 --smoke --from-scratch
 python train.py --stage 3 --smoke --from-scratch
 
 # Override parallel environments, budget, device, and random seed.
-python train.py --stage 1 --num-envs 2 --timesteps 3000000 --device cuda --seed 0
+python train.py --stage 1 --num-envs 8 --timesteps 3000000 --device cuda --seed 0
 
 # Continue from an explicit model name or path.
 python train.py --stage 1 --resume-from ppo2_stage1_nav
@@ -82,7 +82,7 @@ python train_mdp.py --stage 2 --smoke --from-scratch
 python train_mdp.py --stage 3 --smoke --from-scratch
 
 # Override parallel environments, budget, device, and random seed.
-python train_mdp.py --stage 1 --num-envs 2 --timesteps 3000000 --device cuda --seed 0
+python train_mdp.py --stage 1 --num-envs 8 --timesteps 3000000 --device cuda --seed 0
 
 # Continue from an explicit model name or path.
 python train_mdp.py --stage 1 --resume-from mdp_ppo2_stage1_nav
@@ -112,7 +112,7 @@ python test.py --stage 3 --output outputs/figures/pomdp_stage3.png --seed 0
 
 ```powershell
 python test_mdp.py --stage 1 --render
-python test_mdp.py --stage 2 --render
+python test_mdp.py --stage 2 --render --seed 1  # 0 2 3 4 12
 python test_mdp.py --stage 3 --render
 python test_mdp.py --stage 3 --model outputs/models/mdp_ppo2_final_leader-best.zip --render
 python test_mdp.py --stage 3 --stochastic --render
