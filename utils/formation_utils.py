@@ -117,7 +117,7 @@ def compute_W_matrix(g_nom_i, g_nom_j, g_nom_k, theta=0):
     # 注意：Eq. 13 中 定义的是 Theta^T 在最后乘，这里我们先构造 Theta
     Theta = np.eye(3)
 
-    Theta[:2, :2] = R_theta.T  # 注意这里是转置
+    Theta[:2, :2] = R_theta  # 注意这里是转置
 
     # 3. 构造 w_jk (小写 w) - 包含投影和缩放因子
     # Eq. 13 中 w_jk = diag(p_jk_theta, phi_jk)
@@ -132,12 +132,6 @@ def compute_W_matrix(g_nom_i, g_nom_j, g_nom_k, theta=0):
     w_ki = np.diag([p_ki_proj[0], p_ki_proj[1], phi_ki_nom])
     
     # 4. 计算最终的 W 矩阵 (大写 W)
-    # 根据 Eq. 13: W_jk = w_jk * Theta^T
-    # 因为 Theta = diag(R^T, 1), 所以 Theta^T = diag(R, 1)
-    # 但根据 python 矩阵乘法，我们要仔细看公式
-    # W_jk = w_jk @ Theta  (这里需要仔细确认是否再次转置，
-    # 论文 Eq.279 定义: W_jk = w_jk * Theta^T. 
-    # 而 Theta 定义里左上角已经是 R^T. 所以 Theta^T 左上角是 R)
     
     W_jk = w_jk @ Theta.T
     W_ki = w_ki @ Theta.T
@@ -156,8 +150,10 @@ def get_square_configuration():
     """
     y = 1.0
     x = 3 * y
+    # x = 1.0
+    # y = 3.0
     g_nom = np.array([
-        [ x,  y,  0.0],       # 0: Leader 1 (顶点)
+        [ -0.8,  y,  0.0],       # 0: Leader 1 (顶点)  [x, y]
         [ y,  -x,  np.pi/2],   # 1: Leader 2 (右点)
         [-y,  x, -np.pi/2],   # 2: Follower 1 (左点)
         [ -x, -y,  np.pi]      # 3: Follower 2 (底点)
@@ -176,7 +172,7 @@ def get_square_topology():
     """
     构成一个长度为 2 的 DEP (Dual-Entry Path)。
     两个入口是 Leader (0和1)，内部节点是 Follower (2和3)。
-    双向通信路径: Leader1(0) <-> Follower1(2) <-> Follower2(3) <-> Leader2(1)
+    双向通信路径: Leader1(0) <-> Follower2(3) <-> Follower1(2) <-> Leader2(1)
     """
     edges = [
         (0, 2),

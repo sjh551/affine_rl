@@ -25,18 +25,18 @@ class FormationGraph:
         if self.n_agents == 4:
             # ==========================================
             # 2 Leader + 2 Follower 的基础正方形拓扑
-            # 路径串联: Leader1(0) <-> Follower1(2) <-> Follower2(3) <-> Leader2(1)
+            # 路径串联: Leader1(0) <-> Follower2(3) <-> Follower1(2) <-> Leader2(1)
             # ==========================================
             
-            # 1. 对于 Follower1 (索引 k=2): 
-            # 它的两个邻居是 Leader1(0) 和 Follower2(3)。
+            # 1. 对于 Follower1 (索引 k=2):
+            # 它的两个邻居是 Leader2(1) 和 Follower2(3)。
             # 按照 (i, j, k) 且 i < j 的习惯：
-            triplets.append((0, 3, 2)) 
+            triplets.append((0, 3, 2))
             
-            # 2. 对于 Follower2 (索引 k=3): 
-            # 它的两个邻居是 Follower1(2) 和 Leader2(1)。
+            # 2. 对于 Follower2 (索引 k=3):
+            # 它的两个邻居是 Leader1(0) 和 Follower1(2)。
             # 按照 (i, j, k) 且 i < j 的习惯：
-            triplets.append((1, 2, 3)) 
+            triplets.append((1, 2, 3))
             
         elif self.n_agents == 9:
             # ==========================================

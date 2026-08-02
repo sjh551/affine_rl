@@ -6,7 +6,15 @@ import pybullet_data
 import time
 import math
 from utils.formation_graph import FormationGraph
-from utils.formation_utils import get_square_configuration, get_square_topology, get_nominal_configuration, get_topology, get_five_agent_configuration, get_five_agent_topology
+from utils.formation_utils import (
+    compute_W_matrix,
+    get_square_configuration,
+    get_square_topology,
+    get_nominal_configuration,
+    get_topology,
+    get_five_agent_configuration,
+    get_five_agent_topology,
+)
 import itertools
 from collections import deque
 import os
@@ -18,7 +26,10 @@ RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf"
 
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, enable_followers=True, hide_robots=False, draw_line=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
-                 k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
+                 k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
+                 follower_control_mode="centralized", physics_substeps_per_control=24,
+                 physics_timestep=1.0 / 240.0, follower_velocity_deadzone=0.0,
+                 follower_deadzone_mode="absolute"):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -49,6 +60,51 @@ class FormationPyBulletEnv(gym.Env):
         self.active_n_followers = self.n_followers if enable_followers else 0
         self.num_robots = self.n_leaders + self.active_n_followers
         self.robot_ids = []
+        valid_follower_control_modes = {"centralized", "distributed"}
+        self.follower_control_mode = str(follower_control_mode).lower()
+        if self.follower_control_mode not in valid_follower_control_modes:
+            raise ValueError(
+                "follower_control_mode 必须是 'centralized' 或 'distributed'，"
+                f"当前值为 {follower_control_mode!r}"
+            )
+        if (
+            isinstance(physics_substeps_per_control, bool)
+            or not isinstance(physics_substeps_per_control, (int, np.integer))
+            or physics_substeps_per_control < 1
+        ):
+            raise ValueError(
+                "physics_substeps_per_control 必须是大于等于 1 的整数，"
+                f"当前值为 {physics_substeps_per_control!r}"
+            )
+        self.physics_substeps_per_control = int(physics_substeps_per_control)
+        if (
+            isinstance(physics_timestep, bool)
+            or not np.isfinite(physics_timestep)
+            or physics_timestep <= 0.0
+        ):
+            raise ValueError(
+                "physics_timestep 必须是大于 0 的有限数，"
+                f"当前值为 {physics_timestep!r}"
+            )
+        self.physics_timestep = float(physics_timestep)
+        if (
+            isinstance(follower_velocity_deadzone, bool)
+            or not np.isfinite(follower_velocity_deadzone)
+            or follower_velocity_deadzone < 0.0
+        ):
+            raise ValueError(
+                "follower_velocity_deadzone 必须是大于等于 0 的有限数，"
+                f"当前值为 {follower_velocity_deadzone!r}"
+            )
+        self.follower_velocity_deadzone = float(follower_velocity_deadzone)
+
+        valid_deadzone_modes = {"absolute", "correction"}
+        self.follower_deadzone_mode = str(follower_deadzone_mode).lower()
+        if self.follower_deadzone_mode not in valid_deadzone_modes:
+            raise ValueError(
+                "follower_deadzone_mode 必须是 'absolute' 或 'correction'，"
+                f"当前值为 {follower_deadzone_mode!r}"
+            )
         
 
         # --- 初始化标称构型和权重 ---
@@ -115,27 +171,74 @@ class FormationPyBulletEnv(gym.Env):
 
     def _init_global_matrices(self):
         """
-        构建 9 个智能体的全局拉普拉斯矩阵，并剔除角度维度，进行分块
+        构建全局矩阵，并准备集中式和分布式控制所需的常量。
         """
-        # 1. 构建矩阵 M
+        self.agent_state_dim = 3
+        self.formation_theta = 0.0
+
+        # 集中式控制所需的全局矩阵。
         fg = FormationGraph(self.g_nom)
-        self.M_3d = fg.build_laplacian(theta=0)
+        self.M_3d = fg.build_laplacian(theta=self.formation_theta)
+        # position_indices = np.array([
+        #     index
+        #     for agent_idx in range(len(self.g_nom))
+        #     for index in (3 * agent_idx, 3 * agent_idx + 1)
+        # ])
+
+        # self.M_2d = self.M_3d[np.ix_(position_indices, position_indices)]
+        # print(self.M_2d)
         
         # 转成 1D 数组方便矩阵相乘
-        self.g_nom_flat = np.concatenate(self.g_nom) # shape: (18,)
+        self.g_nom_flat = np.concatenate(self.g_nom)
         
-        # 矩阵分块 (Leaders: 前 6 行/列; Followers: 后 21 行/列)
-        split_idx = self.n_leaders * 3 # 2 个 leader * 3D = 6
+        # 矩阵分块：领导者在前，跟随者在后。
+        self.follower_split_idx = self.n_leaders * self.agent_state_dim
         
-        self.M_ff = self.M_3d[split_idx:, split_idx:] # (21, 21)
-        self.M_fl = self.M_3d[split_idx:, :split_idx] # (21, 6)
+        self.M_ff = self.M_3d[self.follower_split_idx:, self.follower_split_idx:]
+        self.M_fl = self.M_3d[self.follower_split_idx:, :self.follower_split_idx]
         
-        # 5. 提前求逆 (极大提升仿真速度)
+        # 集中式控制每一步都会使用该逆矩阵，因此离线计算。
         self.M_ff_inv = np.linalg.inv(self.M_ff)
+
+        # 分布式控制数据。每个跟随者只保存自己的局部三元组
+        # (i, j, k) 以及对应的 W_jk、W_ki。
+        self.follower_local_constraints = {}
+        for i, j, k in fg.triplets:
+            W_jk, W_ki = compute_W_matrix(
+                self.g_nom[i],
+                self.g_nom[j],
+                self.g_nom[k],
+                theta=self.formation_theta,
+            )
+            self.follower_local_constraints.setdefault(k, []).append(
+                (i, j, W_jk, W_ki)
+            )
+
+        # W_kk = sum(W_jk + W_ki) 只由标称构型决定，同样离线求逆。
+        self.follower_Wkk_inv = {}
+        for k, constraints in self.follower_local_constraints.items():
+            W_kk = np.zeros((self.agent_state_dim, self.agent_state_dim))
+            for _, _, W_jk, W_ki in constraints:
+                W_kk += W_jk + W_ki
+
+            if np.linalg.matrix_rank(W_kk) < self.agent_state_dim:
+                raise ValueError(
+                    f"Follower {k} 的 W_kk 不可逆，无法使用论文公式 (29)"
+                )
+            self.follower_Wkk_inv[k] = np.linalg.inv(W_kk)
+
+        expected_followers = set(range(self.n_leaders, len(self.g_nom)))
+        missing_followers = expected_followers - set(self.follower_local_constraints)
+        if missing_followers:
+            raise ValueError(
+                "以下跟随者没有局部约束，无法进行分布式控制："
+                f"{sorted(missing_followers)}"
+            )
 
     def reset(self,seed=None, options=None):
         super().reset(seed=seed)
         p.resetSimulation()
+        p.setTimeStep(self.physics_timestep)
         p.setGravity(0, 0, -9.8)
         p.loadURDF("plane.urdf")
         
@@ -216,7 +319,9 @@ class FormationPyBulletEnv(gym.Env):
             self._generate_obstacles()
         else:
             self.obstacles = [] # 确保列表为空
-        for _ in range(100):
+        settling_duration = 100.0 / 240.0
+        settling_steps = max(1, round(settling_duration / self.physics_timestep))
+        for _ in range(settling_steps):
             for rid in self.robot_ids:
                 # 强制方向盘回正
                 p.setJointMotorControlArray(
@@ -316,7 +421,7 @@ class FormationPyBulletEnv(gym.Env):
             self._control_follower(states)
 
         # --- 3. 物理仿真 (高频率) ---
-        for _ in range(24): 
+        for _ in range(self.physics_substeps_per_control):
             p.stepSimulation()
 
         # --- 4. 可视化队形连线 (画三角形) ---
@@ -376,59 +481,74 @@ class FormationPyBulletEnv(gym.Env):
     # ============================================================
     #   [核心接口] Follower 控制算法
     # ============================================================
+    def _apply_follower_velocity_deadzone(
+        self,
+        desired_velocity,
+        actual_velocity,
+    ):
+        """
+        在叠加 APF 之前，对编队控制律产生的平移速度施加死区。
+
+        absolute:
+            期望平移速度模长不超过阈值时，将其设为零。
+            适用于领导者静止、跟随者期望稳态速度为零的情况。
+        correction:
+            新期望速度与当前实际速度之差不超过阈值时，
+            保持当前实际速度，适用于领导者运动的情况。
+        """
+        command = np.asarray(desired_velocity, dtype=float).copy()
+        actual = np.asarray(actual_velocity, dtype=float)
+        threshold = self.follower_velocity_deadzone
+
+        if threshold <= 0.0:
+            return command
+
+        if self.follower_deadzone_mode == "absolute":
+            if np.linalg.norm(command[:2]) <= threshold:
+                command[:2] = 0.0
+        else:
+            velocity_correction = command[:2] - actual[:2]
+            if np.linalg.norm(velocity_correction) <= threshold:
+                command[:2] = actual[:2]
+
+        return command
+
     def _control_follower(self, states):
         """
-        使用全局 3D 矩阵一次性计算跟随者的目标速度
+        根据 follower_control_mode 计算跟随者速度，再统一叠加 APF。
+
+        centralized:
+            使用全局 M_ff 一次性联立求解所有跟随者速度。
+        distributed:
+            每个跟随者按照论文公式 (29)，仅使用自己的状态、两个
+            邻居的相对状态和邻居当前速度独立计算控制量。
         """
-        # 1. 提取实时的全局状态 (x, y, yaw)
-        # p_flat shape: (27,), v_l_flat shape: (6,)
-        p_all = []
-        for i in range(self.num_robots):  
-            p_all.extend(states[i]['pos'][:2])
-            p_all.extend([states[i]['yaw']])
-        p_flat = np.array(p_all)
-        
-        v_l = []
-        for i in range(2):
-            v_l.extend(states[i]['vel'][:2])
-            # 只提取 Z 轴角速度，保证 leader_vel 的维度正好是 6 (2 * 3)
-            v_l.extend([states[i]['angular_vel']]) 
-        v_l_flat = np.array(v_l)
-        
-        k_f = 2.0 # 跟随者增益
-        
-        # 2. 核心数学公式：v_f = M_ff_inv @ ( -k_f * (M @ p)_f - M_fl @ v_l )
-        # 计算全局误差 (shape: 27,)
-        error_global = -k_f * (self.M_3d @ p_flat)
-        
-        # 截取属于 Followers 的部分 (后 21 维)
-        error_f = error_global[6:]
-        
-        # 计算 Leader 运动带来的耦合项 (21x6 @ 6, = 21,)
-        coupling_f = -self.M_fl @ v_l_flat
-        
-        # 求解 7 个 Follower 的 3D 速度 (世界系, shape: 21,)
-        v_f_flat = self.M_ff_inv @ (error_f + coupling_f)
-        
-        # 3. 解析回各个机器人的 3D 速度并安全限幅
-        follower_vels = []
-        for i in range(self.active_n_followers):
-            vel_3d = np.array(v_f_flat[i*3 : i*3+3]) # shape: (3,)
-            follower_vels.append(vel_3d)
+        k_f = 1.0
 
-        # 4. 世界坐标系 -> 体坐标系 转换与驱动
+        if self.follower_control_mode == "centralized":
+            follower_vels = self._control_follower_centralized(states, k_f)
+        else:
+            follower_vels = self._control_follower_distributed(states, k_f)
+
+        # 论文控制量计算完成后，两种模式统一叠加 APF 并驱动底盘。
         for idx in range(self.active_n_followers):
-            robot_id = self.robot_ids[idx + 2]
+            agent_idx = idx + self.n_leaders
+            robot_id = self.robot_ids[agent_idx]
 
-            _, APF_vel = self._get_obstacle_repulsion(states[idx + 2]['pos'][:2])
+            formation_velocity = self._apply_follower_velocity_deadzone(
+                desired_velocity=follower_vels[idx],
+                actual_velocity=states[agent_idx]['vel'],
+            )
+
+            _, APF_vel = self._get_obstacle_repulsion(states[agent_idx]['pos'][:2])
             # print(f"Follower {idx} APF_vel: ({APF_vel[0]:.2f}, {APF_vel[1]:.2f})")
 
-            world_vx = follower_vels[idx][0] + APF_vel[0]  # 期望绝对 X 速度
-            world_vy = follower_vels[idx][1] + APF_vel[1]  # 期望绝对 Y 速度
+            world_vx = formation_velocity[0] + APF_vel[0]  # 期望绝对 X 速度
+            world_vy = formation_velocity[1] + APF_vel[1]  # 期望绝对 Y 速度
             # w = follower_vels[idx][2]        # 期望角速度
             
             # 直接从 states 字典获取 yaw
-            yaw = states[idx + 2]['yaw']
+            yaw = states[agent_idx]['yaw']
             
             # 将世界系平移速度转化为全向小车体坐标系的 (vx, vy)
             v_body_x = world_vx * np.cos(yaw) + world_vy * np.sin(yaw)
@@ -439,6 +559,91 @@ class FormationPyBulletEnv(gym.Env):
             # 调用底层舵轮解算函数
             # print(f"Follower {idx} world_v: ({world_vx:.2f}, {world_vy:.2f}), body_v: ({v_body_x:.2f}, {v_body_y:.2f})")
             self._drive_robot(robot_id, v_body_x, v_body_y, 0)
+
+    def _control_follower_centralized(self, states, k_f):
+        """
+        论文公式 (29) 的集中式矩阵实现：
+
+        g_dot_f = M_ff^-1[-k_f(Mg)_f - M_fl g_dot_l].
+        """
+        g_flat = np.concatenate([
+            self._get_agent_joint_state(states, i)
+            for i in range(self.num_robots)
+        ])
+        leader_vel_flat = np.concatenate([
+            self._get_agent_joint_velocity(states, i)
+            for i in range(self.n_leaders)
+        ])
+
+        constraint_error_f = (
+            self.M_3d @ g_flat
+        )[self.follower_split_idx:]
+        follower_vel_flat = self.M_ff_inv @ (
+            -k_f * constraint_error_f
+            - self.M_fl @ leader_vel_flat
+        )
+
+        return [
+            follower_vel_flat[
+                i * self.agent_state_dim:(i + 1) * self.agent_state_dim
+            ].copy()
+            for i in range(self.active_n_followers)
+        ]
+
+    def _control_follower_distributed(self, states, k_f):
+        """
+        论文公式 (29) 的逐跟随者分布式实现。
+
+        每个跟随者 k 只读取局部约束中邻居 i、j 的状态和当前速度：
+
+        g_dot_k = W_kk^-1 sum[
+            W_jk(k_f(g_i-g_k) + g_dot_i)
+            + W_ki(k_f(g_j-g_k) + g_dot_j)
+        ].
+
+        对跟随者邻居使用本周期测得的实际速度，不使用本函数刚算出的
+        目标速度，从而避免在一个控制周期内形成集中式联立求解。
+        """
+        follower_vels = []
+
+        for k in range(self.n_leaders, self.num_robots):
+            g_k = self._get_agent_joint_state(states, k)
+            local_input = np.zeros(self.agent_state_dim)
+
+            for i, j, W_jk, W_ki in self.follower_local_constraints[k]:
+                g_i = self._get_agent_joint_state(states, i)
+                g_j = self._get_agent_joint_state(states, j)
+                g_dot_i = self._get_agent_joint_velocity(states, i)
+                g_dot_j = self._get_agent_joint_velocity(states, j)
+
+                local_input += (
+                    W_jk @ (k_f * (g_i - g_k) + g_dot_i)
+                    + W_ki @ (k_f * (g_j - g_k) + g_dot_j)
+                )
+
+            follower_vels.append(
+                self.follower_Wkk_inv[k] @ local_input
+            )
+
+        return follower_vels
+
+    @staticmethod
+    def _get_agent_joint_state(states, agent_idx):
+        """返回论文中的 g_k = [p_x, p_y, phi]^T。"""
+        return np.array([
+            states[agent_idx]['pos'][0],
+            states[agent_idx]['pos'][1],
+            states[agent_idx]['yaw'],
+        ], dtype=float)
+
+    @staticmethod
+    def _get_agent_joint_velocity(states, agent_idx):
+        """返回论文中的 g_dot_k = [v_x, v_y, omega]^T。"""
+        return np.array([
+            states[agent_idx]['vel'][0],
+            states[agent_idx]['vel'][1],
+            states[agent_idx]['angular_vel'],
+        ], dtype=float)
     
     def _drive_robot(self, robot_id, v_x, v_y, w):
         """

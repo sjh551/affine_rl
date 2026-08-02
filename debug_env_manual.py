@@ -5,7 +5,10 @@ from POMDP_env import FormationPyBulletEnv
 from draw.shoot_img import capture_thesis_image
 
 # 初始化环境
-env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False,hide_robots=False, draw_line=True)
+env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False,hide_robots=False, draw_line=True, 
+                           follower_velocity_deadzone=0.0,
+                           follower_deadzone_mode="absolute",
+                           follower_control_mode="distributed")     # distributed centralized
 env.reset()
 
 print("================================================")
