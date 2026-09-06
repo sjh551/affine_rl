@@ -16,10 +16,10 @@ def get_nominal_configuration():
         [ 0,  1, -np.pi/16], # g3
         [ 1, -1, np.pi/16],  # g4
         [-1,  0, 0.0],       # g5
-        [-2, -3, -np.pi/16], # g6
+        [-2, -3, 3*np.pi/16], # g6
         [-3, -4, np.pi/4],   # g7
         [ 3,  2, -np.pi/8],  # g8
-        [ 4,  3, -np.pi/16]  # g9 
+        [ 4,  3, -3*np.pi/16]  # g9 
     ])
     return g_nom
 
@@ -153,7 +153,7 @@ def get_square_configuration():
     # x = 1.0
     # y = 3.0
     g_nom = np.array([
-        [ -0.8,  y,  0.0],       # 0: Leader 1 (顶点)  [x, y]
+        [ x,  y,  0.0],       # 0: Leader 1 (顶点)  [x, y]  x = -1 能让x方向的谱等于0, 也即完全不发散
         [ y,  -x,  np.pi/2],   # 1: Leader 2 (右点)
         [-y,  x, -np.pi/2],   # 2: Follower 1 (左点)
         [ -x, -y,  np.pi]      # 3: Follower 2 (底点)

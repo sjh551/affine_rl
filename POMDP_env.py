@@ -6,6 +6,7 @@ import pybullet_data
 import time
 import math
 from utils.formation_graph import FormationGraph
+from utils.formation_optimizer import optimize_nominal_configuration
 from utils.formation_utils import (
     compute_W_matrix,
     get_square_configuration,
@@ -29,7 +30,9 @@ class FormationPyBulletEnv(gym.Env):
                  k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
                  follower_control_mode="centralized", physics_substeps_per_control=24,
                  physics_timestep=1.0 / 240.0, follower_velocity_deadzone=0.0,
-                 follower_deadzone_mode="absolute"):
+                 follower_deadzone_mode="absolute", print_follower_spectrum=False,
+                 follower_formation_gain=1.0,
+                 optimize_formation=True, formation_optimization_options=None):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -56,6 +59,7 @@ class FormationPyBulletEnv(gym.Env):
         # --- 参数配置 ---
         self.n_leaders = 2
         self.n_followers = 2
+        self.formation_theta = 0.0
         self.enable_followers = enable_followers
         self.active_n_followers = self.n_followers if enable_followers else 0
         self.num_robots = self.n_leaders + self.active_n_followers
@@ -98,6 +102,18 @@ class FormationPyBulletEnv(gym.Env):
             )
         self.follower_velocity_deadzone = float(follower_velocity_deadzone)
 
+        if (
+            isinstance(follower_formation_gain, bool)
+            or not np.isfinite(follower_formation_gain)
+        ):
+            raise ValueError(
+                "follower_formation_gain 必须是有限数，"
+                f"当前值为 {follower_formation_gain!r}"
+            )
+        # 默认仍采用论文中的正增益。允许传入负值仅用于稳定性对照实验；
+        # 负值会把构型误差反馈的方向反转，不能作为正常控制参数。
+        self.follower_formation_gain = float(follower_formation_gain)
+
         valid_deadzone_modes = {"absolute", "correction"}
         self.follower_deadzone_mode = str(follower_deadzone_mode).lower()
         if self.follower_deadzone_mode not in valid_deadzone_modes:
@@ -105,11 +121,67 @@ class FormationPyBulletEnv(gym.Env):
                 "follower_deadzone_mode 必须是 'absolute' 或 'correction'，"
                 f"当前值为 {follower_deadzone_mode!r}"
             )
+        self.print_follower_spectrum = bool(print_follower_spectrum)
+        self.optimize_formation = bool(optimize_formation)
+        if formation_optimization_options is None:
+            formation_optimization_options = {}
+        if not isinstance(formation_optimization_options, dict):
+            raise TypeError("formation_optimization_options must be a dict or None")
+        self.formation_optimization_options = dict(
+            formation_optimization_options
+        )
         
 
         # --- 初始化标称构型和权重 ---
-        self.g_nom, self.edges = get_square_configuration(), get_square_topology()
+        initial_g_nom = get_square_configuration()
+        self.edges = get_square_topology()
         # self.g_nom, self.edges = get_five_agent_configuration(), get_five_agent_topology()
+        # self.g_nom, self.edges = get_nominal_configuration(), get_topology()
+        self.formation_optimization_result = None
+        should_optimize_formation = (
+            self.optimize_formation
+            and self.enable_followers
+            and self.follower_control_mode == "distributed"
+        )
+        if should_optimize_formation:
+            reserved_options = {
+                "nominal_configuration",
+                "n_leaders",
+                "theta",
+                "return_result",
+            }
+            invalid_options = reserved_options.intersection(
+                self.formation_optimization_options
+            )
+            if invalid_options:
+                raise ValueError(
+                    "formation_optimization_options contains reserved keys: "
+                    f"{sorted(invalid_options)}"
+                )
+
+            optimization_options = {
+                "spectral_radius_limit": 0.50,
+                "search_radius": 3.0,
+                "min_degree_singular_value": 1.0e-3,
+                "maxiter": 300,
+                "popsize": 15,
+                "seed": 0,
+                "polish": True,
+                "strict": True,
+                "verbose": True,
+            }
+            optimization_options.update(self.formation_optimization_options)
+            self.g_nom, self.formation_optimization_result = (
+                optimize_nominal_configuration(
+                    initial_g_nom,
+                    n_leaders=self.n_leaders,
+                    theta=self.formation_theta,
+                    return_result=True,
+                    **optimization_options,
+                )
+            )
+        else:
+            self.g_nom = np.asarray(initial_g_nom, dtype=float).copy()
         # 2. 构建全局大矩阵并进行 2D 降维分块
         self._init_global_matrices()
 
@@ -174,7 +246,6 @@ class FormationPyBulletEnv(gym.Env):
         构建全局矩阵，并准备集中式和分布式控制所需的常量。
         """
         self.agent_state_dim = 3
-        self.formation_theta = 0.0
 
         # 集中式控制所需的全局矩阵。
         fg = FormationGraph(self.g_nom)
@@ -186,6 +257,12 @@ class FormationPyBulletEnv(gym.Env):
         # ])
 
         # self.M_2d = self.M_3d[np.ix_(position_indices, position_indices)]
+        # eigvals, eigvecs = np.linalg.eig(self.M_2d)
+
+        # print("特征值：")
+        # print(eigvals)
+        # print("特征向量（每一列）：")
+        # print(eigvecs)
         # print(self.M_2d)
         
         # 转成 1D 数组方便矩阵相乘
@@ -216,16 +293,48 @@ class FormationPyBulletEnv(gym.Env):
 
         # W_kk = sum(W_jk + W_ki) 只由标称构型决定，同样离线求逆。
         self.follower_Wkk_inv = {}
+        self.follower_degree_matrix = np.zeros_like(self.M_ff)
+        self.follower_adjacency_matrix = np.zeros_like(self.M_ff)
+
         for k, constraints in self.follower_local_constraints.items():
             W_kk = np.zeros((self.agent_state_dim, self.agent_state_dim))
-            for _, _, W_jk, W_ki in constraints:
+            follower_row = k - self.n_leaders
+            row_slice = slice(
+                follower_row * self.agent_state_dim,
+                (follower_row + 1) * self.agent_state_dim,
+            )
+
+            for i, j, W_jk, W_ki in constraints:
                 W_kk += W_jk + W_ki
+
+                # 按论文符号 M_ff = A_ff - D_ff 构造跟随者邻接块。
+                # W_jk 乘邻居 i，W_ki 乘邻居 j。领导者列不属于 A_ff。
+                if i >= self.n_leaders:
+                    follower_col = i - self.n_leaders
+                    col_slice = slice(
+                        follower_col * self.agent_state_dim,
+                        (follower_col + 1) * self.agent_state_dim,
+                    )
+                    self.follower_adjacency_matrix[
+                        row_slice, col_slice
+                    ] += W_jk
+
+                if j >= self.n_leaders:
+                    follower_col = j - self.n_leaders
+                    col_slice = slice(
+                        follower_col * self.agent_state_dim,
+                        (follower_col + 1) * self.agent_state_dim,
+                    )
+                    self.follower_adjacency_matrix[
+                        row_slice, col_slice
+                    ] += W_ki
 
             if np.linalg.matrix_rank(W_kk) < self.agent_state_dim:
                 raise ValueError(
                     f"Follower {k} 的 W_kk 不可逆，无法使用论文公式 (29)"
                 )
             self.follower_Wkk_inv[k] = np.linalg.inv(W_kk)
+            self.follower_degree_matrix[row_slice, row_slice] = W_kk
 
         expected_followers = set(range(self.n_leaders, len(self.g_nom)))
         missing_followers = expected_followers - set(self.follower_local_constraints)
@@ -234,6 +343,110 @@ class FormationPyBulletEnv(gym.Env):
                 "以下跟随者没有局部约束，无法进行分布式控制："
                 f"{sorted(missing_followers)}"
             )
+
+        # 对应上一拍邻居速度迭代：
+        # g_dot_f[n+1] = D_ff^-1 A_ff g_dot_f[n] + external_input.
+        self.follower_iteration_matrix = np.linalg.solve(
+            self.follower_degree_matrix,
+            self.follower_adjacency_matrix,
+        )
+        self.follower_iteration_eigenvalues = np.linalg.eigvals(
+            self.follower_iteration_matrix
+        )
+        self.follower_iteration_spectral_radius = float(
+            np.max(np.abs(self.follower_iteration_eigenvalues))
+        )
+
+        if self.print_follower_spectrum:
+            self._print_follower_iteration_spectrum()
+
+    def _print_follower_iteration_spectrum(self):
+        """打印跟随者子系统 D_ff^-1 A_ff 的谱。"""
+        eigenvalues = sorted(
+            self.follower_iteration_eigenvalues,
+            key=lambda value: abs(value),
+            reverse=True,
+        )
+
+        # 当前 FormationGraph 构造的是 D-A，因此应与
+        # 论文符号下的 A_ff-D_ff 相差一个整体负号。
+        paper_M_ff = (
+            self.follower_adjacency_matrix
+            - self.follower_degree_matrix
+        )
+        sign_consistency_error = float(
+            np.max(np.abs(paper_M_ff + self.M_ff))
+        )
+
+        print("=" * 72)
+        print("跟随者速度迭代矩阵谱")
+        print(f"Follower block size : {self.M_ff.shape}")
+        print("Definition          : M_ff = A_ff - D_ff")
+        print("Iteration matrix    : T_f = D_ff^(-1) A_ff")
+        print(
+            "Sign check          : "
+            f"max|M_ff(paper) + M_ff(code)| = {sign_consistency_error:.3e}"
+        )
+        print("Eigenvalues (sorted by magnitude):")
+        for index, value in enumerate(eigenvalues):
+            print(
+                f"  lambda[{index:02d}] = "
+                f"{value.real:+.8f}{value.imag:+.8f}j, "
+                f"|lambda| = {abs(value):.8f}"
+            )
+        print(
+            "Spectral radius     : "
+            f"rho(T_f) = {self.follower_iteration_spectral_radius:.8f}"
+        )
+
+        # theta=0 时 x、y、phi 通常完全解耦，此时额外给出分方向谱。
+        state_size = self.follower_iteration_matrix.shape[0]
+        coordinate_indices = [
+            np.arange(axis, state_size, self.agent_state_dim)
+            for axis in range(self.agent_state_dim)
+        ]
+        same_axis_mask = np.zeros_like(
+            self.follower_iteration_matrix,
+            dtype=bool,
+        )
+        for indices in coordinate_indices:
+            same_axis_mask[np.ix_(indices, indices)] = True
+        cross_axis_coupling = float(
+            np.max(
+                np.abs(
+                    self.follower_iteration_matrix[~same_axis_mask]
+                )
+            )
+        )
+
+        if cross_axis_coupling <= 1e-10:
+            print("Per-coordinate spectral radii:")
+            for axis_name, indices in zip(
+                ("x", "y", "phi"),
+                coordinate_indices,
+            ):
+                axis_matrix = self.follower_iteration_matrix[
+                    np.ix_(indices, indices)
+                ]
+                axis_eigenvalues = np.linalg.eigvals(axis_matrix)
+                axis_radius = float(np.max(np.abs(axis_eigenvalues)))
+                print(
+                    f"  {axis_name:>3s}: rho = {axis_radius:.8f}, "
+                    f"eigenvalues = {np.array2string(axis_eigenvalues, precision=6)}"
+                )
+        else:
+            print(
+                "Per-coordinate spectra: unavailable because x/y/phi are "
+                f"coupled (max cross coupling = {cross_axis_coupling:.3e})"
+            )
+
+        if self.follower_iteration_spectral_radius < 1.0:
+            print("Jacobi velocity loop: convergent (rho < 1)")
+        elif np.isclose(self.follower_iteration_spectral_radius, 1.0):
+            print("Jacobi velocity loop: marginal (rho approximately 1)")
+        else:
+            print("Jacobi velocity loop: divergent (rho > 1)")
+        print("=" * 72)
 
     def reset(self,seed=None, options=None):
         super().reset(seed=seed)
@@ -523,7 +736,7 @@ class FormationPyBulletEnv(gym.Env):
             每个跟随者按照论文公式 (29)，仅使用自己的状态、两个
             邻居的相对状态和邻居当前速度独立计算控制量。
         """
-        k_f = 1.0
+        k_f = self.follower_formation_gain
 
         if self.follower_control_mode == "centralized":
             follower_vels = self._control_follower_centralized(states, k_f)

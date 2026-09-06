@@ -8,6 +8,7 @@ from draw.shoot_img import capture_thesis_image
 env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False,hide_robots=False, draw_line=True, 
                            follower_velocity_deadzone=0.0,
                            follower_deadzone_mode="absolute",
+                           print_follower_spectrum=True,
                            follower_control_mode="distributed")     # distributed centralized
 env.reset()
 
