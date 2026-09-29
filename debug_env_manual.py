@@ -9,6 +9,8 @@ env = FormationPyBulletEnv(render_mode=True, enable_obstacles=False,hide_robots=
                            follower_velocity_deadzone=0.0,
                            follower_deadzone_mode="absolute",
                            print_follower_spectrum=True,
+                           # 24 个物理子步对应 0.6 s 控制周期，超过当前
+                           physics_timestep=1.0 / 240.0,
                            follower_control_mode="distributed")     # distributed centralized
 env.reset()
 

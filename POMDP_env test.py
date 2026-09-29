@@ -3,6 +3,9 @@ from gymnasium import spaces
 import numpy as np
 import pybullet as p
 import pybullet_data
+from utils.follower_velocity_iteration import (
+    synchronous_follower_velocity_iterations,
+)
 import time
 import math
 from utils.formation_graph import FormationGraph
@@ -28,7 +31,7 @@ class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, enable_followers=True, hide_robots=False, draw_line=True, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
                  k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
                  follower_control_mode="centralized", physics_substeps_per_control=24,
-                 physics_timestep=1.0 / 240.0):
+                 physics_timestep=1.0 / 240.0, follower_inner_iterations=1):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -59,13 +62,41 @@ class FormationPyBulletEnv(gym.Env):
         self.active_n_followers = self.n_followers if enable_followers else 0
         self.num_robots = self.n_leaders + self.active_n_followers
         self.robot_ids = []
-        valid_follower_control_modes = {"centralized", "distributed"}
+        valid_follower_control_modes = {
+            "centralized",
+            "distributed",
+            "distributed_iterative",
+        }
         self.follower_control_mode = str(follower_control_mode).lower()
         if self.follower_control_mode not in valid_follower_control_modes:
             raise ValueError(
-                "follower_control_mode 必须是 'centralized' 或 'distributed'，"
+                "follower_control_mode 必须是 'centralized'、'distributed' "
+                "或 'distributed_iterative'，"
                 f"当前值为 {follower_control_mode!r}"
             )
+        if (
+            isinstance(follower_inner_iterations, bool)
+            or not isinstance(follower_inner_iterations, (int, np.integer))
+            or follower_inner_iterations < 1
+        ):
+            raise ValueError(
+                "follower_inner_iterations 必须是大于等于 1 的整数，"
+                f"当前值为 {follower_inner_iterations!r}"
+            )
+        self.follower_inner_iterations = int(follower_inner_iterations)
+        self.follower_inner_iteration_history = []
+        self.last_follower_inner_iteration_delta_norms = np.empty(
+            (0, self.active_n_followers),
+            dtype=float,
+        )
+        self.last_follower_inner_iteration_planar_delta_norms = np.empty(
+            (0, self.active_n_followers),
+            dtype=float,
+        )
+        self.last_follower_formation_velocity_commands = np.zeros(
+            (self.active_n_followers, 3),
+            dtype=float,
+        )
         if (
             isinstance(physics_substeps_per_control, bool)
             or not isinstance(physics_substeps_per_control, (int, np.integer))
@@ -317,6 +348,19 @@ class FormationPyBulletEnv(gym.Env):
             p.stepSimulation()
 
         self.current_step = 0
+        self.follower_inner_iteration_history = []
+        self.last_follower_inner_iteration_delta_norms = np.empty(
+            (0, self.active_n_followers),
+            dtype=float,
+        )
+        self.last_follower_inner_iteration_planar_delta_norms = np.empty(
+            (0, self.active_n_followers),
+            dtype=float,
+        )
+        self.last_follower_formation_velocity_commands = np.zeros(
+            (self.active_n_followers, self.agent_state_dim),
+            dtype=float,
+        )
 
         # --- 初始化上一帧的速度记录 ---
         self.last_vels = [np.zeros(3) for _ in range(self.num_robots)]
@@ -401,9 +445,16 @@ class FormationPyBulletEnv(gym.Env):
             # 驱动 followers
             self._control_follower(states)
 
-        # --- 3. 物理仿真 (高频率) ---
-        for _ in range(self.physics_substeps_per_control):
+        # --- 3. 物理仿真 ---
+        # 内迭代模式完成 R 轮同步更新并统一下发后，只推进一次；
+        # baseline 仍使用原有的 physics_substeps_per_control。
+        if self.follower_control_mode == "distributed_iterative":
+            physics_steps_executed = 1
             p.stepSimulation()
+        else:
+            physics_steps_executed = self.physics_substeps_per_control
+            for _ in range(self.physics_substeps_per_control):
+                p.stepSimulation()
 
         # --- 4. 可视化队形连线 (画三角形) ---
         if self.render_mode and self.draw_line:
@@ -426,6 +477,23 @@ class FormationPyBulletEnv(gym.Env):
         done = reward_info['done']
         # print(f"Step: {self.current_step}, Reward: {reward:.3f}, Progress: {reward_info['r_progress']:.3f}, Shape: {reward_info['r_shape']:.3f}, Collision: {reward_info['r_collision']:.3f}, Time: {reward_info['r_time']:.3f}, Smooth: {reward_info['r_smooth']:.3f}")
         info = {}
+        info["physics_steps_executed"] = physics_steps_executed
+        if self.active_n_followers > 0:
+            info["follower_formation_velocity_commands"] = (
+                self.last_follower_formation_velocity_commands.copy()
+            )
+        if self.follower_control_mode == "distributed_iterative":
+            delta_norms = self.last_follower_inner_iteration_delta_norms.copy()
+            info["follower_inner_iterations"] = self.follower_inner_iterations
+            info["follower_inner_iteration_delta_norms"] = delta_norms
+            info["follower_inner_iteration_planar_delta_norms"] = (
+                self.last_follower_inner_iteration_planar_delta_norms.copy()
+            )
+            info["follower_inner_iteration_max_delta_per_round"] = (
+                np.max(delta_norms, axis=1)
+                if delta_norms.size
+                else np.empty(0, dtype=float)
+            )
         if done:
             info['ep_rew_progress'] = self.ep_rew_progress
             info['ep_rew_shape'] = self.ep_rew_shape
@@ -470,14 +538,37 @@ class FormationPyBulletEnv(gym.Env):
             使用全局 M_ff 一次性联立求解所有跟随者速度。
         distributed:
             每个跟随者按照论文公式 (29)，仅使用自己的状态、两个
-            邻居的相对状态和邻居当前速度独立计算控制量。
+            邻居的相对状态和周期开始时的实际速度独立计算控制量，保留
+            原有的一拍延迟实现作为 baseline。
+        distributed_iterative:
+            冻结本周期状态，以周期开始时的 follower 实际速度为初值，
+            执行 follower_inner_iterations 轮同步速度内迭代，再统一下发。
         """
         k_f = 0.5
 
+        self.last_follower_inner_iteration_delta_norms = np.empty(
+            (0, self.active_n_followers),
+            dtype=float,
+        )
+        self.last_follower_inner_iteration_planar_delta_norms = np.empty(
+            (0, self.active_n_followers),
+            dtype=float,
+        )
+
         if self.follower_control_mode == "centralized":
             follower_vels = self._control_follower_centralized(states, k_f)
-        else:
+        elif self.follower_control_mode == "distributed":
             follower_vels = self._control_follower_distributed(states, k_f)
+        else:
+            follower_vels = self._control_follower_distributed_iterative(
+                states,
+                k_f,
+            )
+
+        self.last_follower_formation_velocity_commands = np.asarray(
+            follower_vels,
+            dtype=float,
+        ).copy()
 
         # 论文控制量计算完成后，两种模式统一叠加 APF 并驱动底盘。
         for idx in range(self.active_n_followers):
@@ -571,6 +662,42 @@ class FormationPyBulletEnv(gym.Env):
 
         return follower_vels
 
+    def _control_follower_distributed_iterative(self, states, k_f):
+        """用有限次同步 Jacobi 内迭代近似同一时刻的邻居速度。"""
+        frozen_agent_states = np.stack([
+            self._get_agent_joint_state(states, i)
+            for i in range(self.num_robots)
+        ])
+        frozen_agent_velocities = np.stack([
+            self._get_agent_joint_velocity(states, i)
+            for i in range(self.num_robots)
+        ])
+
+        follower_velocities, delta_norms, planar_delta_norms = (
+            synchronous_follower_velocity_iterations(
+                frozen_agent_states,
+                frozen_agent_velocities,
+                n_leaders=self.n_leaders,
+                follower_local_constraints=self.follower_local_constraints,
+                follower_Wkk_inv=self.follower_Wkk_inv,
+                formation_gain=k_f,
+                iterations=self.follower_inner_iterations,
+            )
+        )
+
+        self.last_follower_inner_iteration_delta_norms = delta_norms.copy()
+        self.last_follower_inner_iteration_planar_delta_norms = (
+            planar_delta_norms.copy()
+        )
+        self.follower_inner_iteration_history.append({
+            "control_step": int(self.current_step),
+            "delta_norms": delta_norms.copy(),
+            "planar_delta_norms": planar_delta_norms.copy(),
+            "final_velocity_estimates": follower_velocities.copy(),
+        })
+
+        return [velocity.copy() for velocity in follower_velocities]
+
     @staticmethod
     def _get_agent_joint_state(states, agent_idx):
         """返回论文中的 g_k = [p_x, p_y, phi]^T。"""
@@ -629,13 +756,6 @@ class FormationPyBulletEnv(gym.Env):
             wheel_vy = v_y + w * wx
             
             speed_2d = np.hypot(wheel_vx, wheel_vy)
-            if speed_2d < 2e-2:
-                # 速度太小时保持当前角度，防止原地抽搐
-                current_angle = current_joint_states[i][0]  
-                target_steering_angles.append(current_angle) 
-                target_wheel_speeds.append(0.0)
-                continue
-                
             ideal_angle = np.arctan2(wheel_vy, wheel_vx)
             cmd_angle = -ideal_angle # 修正 URDF Z 轴反向
             ideal_speed = speed_2d / R

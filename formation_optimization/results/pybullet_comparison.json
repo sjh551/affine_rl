@@ -1,0 +1,41 @@
+{
+  "settings": {
+    "steps": 200,
+    "seed": 0,
+    "control_mode": "distributed",
+    "inner_iterations": 1,
+    "formation_gain": 1.0,
+    "physics_timestep": 0.004166666666666667,
+    "physics_substeps": 24
+  },
+  "configuration_files": {
+    "spectral_radius": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\optimized_configuration.npy",
+    "spectral_norm": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\spectral_norm\\optimized_configuration.npy"
+  },
+  "results": {
+    "spectral_radius": {
+      "requested_steps": 200,
+      "executed_steps": 19,
+      "terminated": true,
+      "truncated": false,
+      "max_follower_command": 11.970752287857437,
+      "max_actual_follower_speed": 1.1071043650385033,
+      "initial_planar_constraint_residual": 1.760836823812103,
+      "final_planar_constraint_residual": 0.30203478278696666,
+      "max_planar_constraint_residual": 1.760836823812103,
+      "minimum_robot_distance": 0.6924708458856708
+    },
+    "spectral_norm": {
+      "requested_steps": 200,
+      "executed_steps": 200,
+      "terminated": false,
+      "truncated": false,
+      "max_follower_command": 1.6503135755044402,
+      "max_actual_follower_speed": 1.6354705867131665,
+      "initial_planar_constraint_residual": 0.02513198436494863,
+      "final_planar_constraint_residual": 0.24328963029739922,
+      "max_planar_constraint_residual": 0.31718347897500854,
+      "minimum_robot_distance": 0.9675312009989192
+    }
+  }
+}

@@ -9,6 +9,7 @@ spectral radius refers to the controller that is actually executed.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Optional, Sequence, Tuple, Union
 import warnings
 
@@ -27,10 +28,95 @@ class FormationOptimizationResult:
     optimized_spectral_radius: float
     objective_value: float
     min_degree_singular_value: float
+    min_signed_coordinate_separation: float
+    minimum_pairwise_distance: float
     success: bool
     message: str
     iterations: int
     function_evaluations: int
+
+
+def _unique_undirected_pairs(
+    pairs: Sequence[Tuple[int, int]],
+    n_agents: int,
+) -> Tuple[Tuple[int, int], ...]:
+    """Validate and de-duplicate unordered agent pairs."""
+
+    unique_pairs = set()
+    for raw_u, raw_v in pairs:
+        u, v = int(raw_u), int(raw_v)
+        if not 0 <= u < n_agents or not 0 <= v < n_agents:
+            raise ValueError(
+                f"constraint pair ({u}, {v}) contains an invalid agent index"
+            )
+        if u == v:
+            raise ValueError(f"constraint pair ({u}, {v}) must use two agents")
+        unique_pairs.add((min(u, v), max(u, v)))
+    return tuple(sorted(unique_pairs))
+
+
+def _build_non_degeneracy_pairs(
+    triplets: Sequence[Tuple[int, int, int]],
+    n_agents: int,
+    constraint_edges: Optional[Sequence[Tuple[int, int]]],
+) -> Tuple[Tuple[int, int], ...]:
+    """Build the pairs appearing in the two signed separation constraints.
+
+    For every local constraint ``(i, j, k)``, the pair ``(i, j)`` enforces
+    invertibility of the local diagonal block.  The DEP/sensing-edge pairs are
+    either supplied explicitly or inferred as ``(i, k)`` and ``(j, k)`` from
+    the same triplets.
+    """
+
+    triplet_pairs = [(i, j) for i, j, _ in triplets]
+    if constraint_edges is None:
+        edge_pairs = [
+            pair
+            for i, j, k in triplets
+            for pair in ((i, k), (j, k))
+        ]
+    else:
+        edge_pairs = list(constraint_edges)
+    return _unique_undirected_pairs(
+        [*triplet_pairs, *edge_pairs],
+        n_agents=n_agents,
+    )
+
+
+def _positions_in_theta_frame(
+    configuration: np.ndarray,
+    theta: float,
+) -> np.ndarray:
+    """Return planar positions expressed in the fixed theta frame."""
+
+    c, s = np.cos(theta), np.sin(theta)
+    rotation = np.array([[c, -s], [s, c]], dtype=float)
+    return np.asarray(configuration, dtype=float)[:, :2] @ rotation
+
+
+def _pair_coordinate_differences(
+    configuration: np.ndarray,
+    pairs: Sequence[Tuple[int, int]],
+    theta: float,
+) -> np.ndarray:
+    """Return one ``[dx_theta, dy_theta]`` row per agent pair."""
+
+    positions_theta = _positions_in_theta_frame(configuration, theta)
+    return np.asarray(
+        [positions_theta[u] - positions_theta[v] for u, v in pairs],
+        dtype=float,
+    )
+
+
+def _minimum_pairwise_distance(configuration: np.ndarray) -> float:
+    """Return the minimum Euclidean distance between any two agents."""
+
+    positions = np.asarray(configuration, dtype=float)[:, :2]
+    distances = [
+        np.linalg.norm(positions[i] - positions[j])
+        for i, j in combinations(range(len(positions)), 2)
+    ]
+    return float(min(distances)) if distances else float("inf")
 
 
 def build_follower_planar_iteration_matrix(
@@ -143,6 +229,11 @@ def optimize_nominal_configuration(
     spectral_radius_limit: float = 0.95,
     search_radius: Union[float, Sequence[float]] = 3.0,
     min_degree_singular_value: float = 1.0e-3,
+    coordinate_margin: float = 1.0e-3,
+    minimum_pairwise_distance: float = 0.8,
+    x_bounds: Optional[Tuple[float, float]] = None,
+    y_bounds: Optional[Tuple[float, float]] = None,
+    constraint_edges: Optional[Sequence[Tuple[int, int]]] = None,
     maxiter: int = 300,
     popsize: int = 15,
     seed: Optional[int] = 0,
@@ -157,10 +248,12 @@ def optimize_nominal_configuration(
 
     ``min sum_i ||p_i - p_i_nom||^2``
 
-    subject to ``rho(D_ff(p)^-1 A_ff(p)) <= spectral_radius_limit``.
-    A lower bound on ``sigma_min(D_ff)`` prevents numerically singular local
-    follower matrices.  Differential evolution is used because the spectral
-    radius constraint is generally non-convex and can be non-smooth.
+    subject to the spectral-radius bound, signed coordinate-separation
+    constraints in the fixed theta frame, a minimum all-agent distance, and
+    follower workspace bounds.  Leaders and yaw values remain exactly fixed.
+    A lower bound on ``sigma_min(D_ff)`` additionally protects the numerical
+    solve.  Differential evolution is used because the resulting constraints
+    are generally non-convex and the spectral radius can be non-smooth.
     """
 
     try:
@@ -178,9 +271,56 @@ def optimize_nominal_configuration(
         raise ValueError("spectral_radius_limit must lie strictly between 0 and 1")
     if min_degree_singular_value <= 0.0:
         raise ValueError("min_degree_singular_value must be positive")
+    if coordinate_margin <= 0.0:
+        raise ValueError("coordinate_margin must be positive")
+    if minimum_pairwise_distance < 0.0:
+        raise ValueError("minimum_pairwise_distance must be non-negative")
+
+    def validate_axis_bounds(
+        name: str,
+        axis_bounds: Optional[Tuple[float, float]],
+    ) -> Optional[Tuple[float, float]]:
+        if axis_bounds is None:
+            return None
+        if len(axis_bounds) != 2:
+            raise ValueError(f"{name} must contain exactly (minimum, maximum)")
+        lower, upper = map(float, axis_bounds)
+        if not np.isfinite(lower) or not np.isfinite(upper) or lower >= upper:
+            raise ValueError(f"{name} must contain finite values with min < max")
+        return lower, upper
+
+    x_bounds = validate_axis_bounds("x_bounds", x_bounds)
+    y_bounds = validate_axis_bounds("y_bounds", y_bounds)
 
     optimized = g_nom.copy()
     triplets = tuple(FormationGraph(g_nom).triplets)
+    non_degeneracy_pairs = _build_non_degeneracy_pairs(
+        triplets,
+        n_agents=len(g_nom),
+        constraint_edges=constraint_edges,
+    )
+    nominal_differences = _pair_coordinate_differences(
+        g_nom,
+        non_degeneracy_pairs,
+        theta=theta,
+    )
+    if np.any(np.isclose(nominal_differences, 0.0, atol=1.0e-12)):
+        zero_locations = np.argwhere(
+            np.isclose(nominal_differences, 0.0, atol=1.0e-12)
+        )
+        details = [
+            (
+                non_degeneracy_pairs[int(pair_index)],
+                "x" if int(axis_index) == 0 else "y",
+            )
+            for pair_index, axis_index in zero_locations
+        ]
+        raise ValueError(
+            "The sign-preserving formulation is undefined because the "
+            f"nominal separation is zero for: {details}"
+        )
+    nominal_coordinate_signs = np.sign(nominal_differences)
+
     follower_slice = slice(n_leaders, len(g_nom))
     initial_positions = g_nom[follower_slice, :2].reshape(-1).copy()
 
@@ -192,9 +332,14 @@ def optimize_nominal_configuration(
     if np.any(~np.isfinite(radius_array)) or np.any(radius_array <= 0.0):
         raise ValueError("search_radius must contain finite positive values")
 
-    bounds = list(
-        zip(initial_positions - radius_array, initial_positions + radius_array)
-    )
+    lower_bounds = initial_positions - radius_array
+    upper_bounds = initial_positions + radius_array
+    for flat_index in range(len(initial_positions)):
+        axis_bounds = x_bounds if flat_index % 2 == 0 else y_bounds
+        if axis_bounds is not None:
+            lower_bounds[flat_index] = axis_bounds[0]
+            upper_bounds[flat_index] = axis_bounds[1]
+    bounds = list(zip(lower_bounds, upper_bounds))
 
     def make_configuration(position_vector: np.ndarray) -> np.ndarray:
         candidate = g_nom.copy()
@@ -212,13 +357,47 @@ def optimize_nominal_configuration(
         except (np.linalg.LinAlgError, ValueError, FloatingPointError):
             return float("inf"), 0.0
 
+    def geometry_values(
+        position_vector: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        candidate = make_configuration(position_vector)
+        coordinate_differences = _pair_coordinate_differences(
+            candidate,
+            non_degeneracy_pairs,
+            theta=theta,
+        )
+        signed_coordinate_separations = (
+            nominal_coordinate_signs * coordinate_differences
+        ).reshape(-1)
+        positions = candidate[:, :2]
+        squared_distances = np.asarray(
+            [
+                np.sum((positions[i] - positions[j]) ** 2)
+                for i, j in combinations(range(len(candidate)), 2)
+            ],
+            dtype=float,
+        )
+        return signed_coordinate_separations, squared_distances
+
     initial_radius, initial_sigma_min = evaluate(initial_positions)
+    initial_coordinate_separations, initial_squared_distances = geometry_values(
+        initial_positions
+    )
+    initial_within_bounds = bool(
+        np.all(initial_positions >= lower_bounds)
+        and np.all(initial_positions <= upper_bounds)
+    )
 
     # If the nominal formation is already feasible, the zero-deviation point is
     # the global optimum and no numerical search is necessary.
     if (
         initial_radius <= spectral_radius_limit
         and initial_sigma_min >= min_degree_singular_value
+        and np.all(initial_coordinate_separations >= coordinate_margin)
+        and np.all(
+            initial_squared_distances >= minimum_pairwise_distance ** 2
+        )
+        and initial_within_bounds
     ):
         result = FormationOptimizationResult(
             configuration=optimized.copy(),
@@ -226,6 +405,10 @@ def optimize_nominal_configuration(
             optimized_spectral_radius=initial_radius,
             objective_value=0.0,
             min_degree_singular_value=initial_sigma_min,
+            min_signed_coordinate_separation=float(
+                np.min(initial_coordinate_separations)
+            ),
+            minimum_pairwise_distance=_minimum_pairwise_distance(g_nom),
             success=True,
             message="The nominal configuration already satisfies the constraints.",
             iterations=0,
@@ -243,18 +426,25 @@ def optimize_nominal_configuration(
 
     def feasibility_values(position_vector: np.ndarray) -> np.ndarray:
         radius, sigma_min = evaluate(position_vector)
-        return np.array(
-            [
-                spectral_radius_limit - radius,
-                sigma_min - min_degree_singular_value,
-            ],
-            dtype=float,
+        signed_separations, squared_distances = geometry_values(position_vector)
+        return np.concatenate(
+            (
+                np.array(
+                    [
+                        spectral_radius_limit - radius,
+                        sigma_min - min_degree_singular_value,
+                    ],
+                    dtype=float,
+                ),
+                signed_separations - coordinate_margin,
+                squared_distances - minimum_pairwise_distance ** 2,
+            )
         )
 
     nonlinear_constraint = NonlinearConstraint(
         feasibility_values,
-        lb=np.zeros(2),
-        ub=np.full(2, np.inf),
+        lb=0.0,
+        ub=np.inf,
     )
 
     with warnings.catch_warnings():
@@ -281,11 +471,28 @@ def optimize_nominal_configuration(
 
     optimized[follower_slice, :2] = scipy_result.x.reshape(-1, 2)
     optimized_radius, optimized_sigma_min = evaluate(scipy_result.x)
+    optimized_coordinate_separations, optimized_squared_distances = (
+        geometry_values(scipy_result.x)
+    )
+    optimized_min_coordinate_separation = float(
+        np.min(optimized_coordinate_separations)
+    )
+    optimized_min_pairwise_distance = float(
+        np.sqrt(np.min(optimized_squared_distances))
+    )
     constraint_tolerance = 1.0e-7
     feasible = bool(
         optimized_radius <= spectral_radius_limit + constraint_tolerance
         and optimized_sigma_min
         >= min_degree_singular_value - constraint_tolerance
+        and np.all(
+            optimized_coordinate_separations
+            >= coordinate_margin - constraint_tolerance
+        )
+        and np.all(
+            optimized_squared_distances
+            >= minimum_pairwise_distance ** 2 - constraint_tolerance
+        )
     )
     success = bool(feasible and np.all(np.isfinite(optimized)))
     message = str(scipy_result.message)
@@ -296,6 +503,8 @@ def optimize_nominal_configuration(
         optimized_spectral_radius=optimized_radius,
         objective_value=objective(scipy_result.x),
         min_degree_singular_value=optimized_sigma_min,
+        min_signed_coordinate_separation=optimized_min_coordinate_separation,
+        minimum_pairwise_distance=optimized_min_pairwise_distance,
         success=success,
         message=message,
         iterations=int(getattr(scipy_result, "nit", -1)),
@@ -309,7 +518,12 @@ def optimize_nominal_configuration(
         raise RuntimeError(
             "Formation optimization did not find a feasible configuration. "
             f"Best rho={optimized_radius:.8f}, "
-            f"required rho<={spectral_radius_limit:.8f}. "
+            f"required rho<={spectral_radius_limit:.8f}; "
+            "minimum signed coordinate separation="
+            f"{optimized_min_coordinate_separation:.8f}, "
+            f"required>={coordinate_margin:.8f}; "
+            f"minimum pairwise distance={optimized_min_pairwise_distance:.8f}, "
+            f"required>={minimum_pairwise_distance:.8f}. "
             "Increase search_radius/maxiter or relax the spectral limit."
         )
 
@@ -336,6 +550,14 @@ def _print_optimization_result(
     print(
         "sigma_min(D_ff)    : "
         f"{result.min_degree_singular_value:.8e}"
+    )
+    print(
+        "Min signed coord   : "
+        f"{result.min_signed_coordinate_separation:.8f}"
+    )
+    print(
+        "Min pair distance  : "
+        f"{result.minimum_pairwise_distance:.8f}"
     )
     print(
         "Solver             : "

@@ -1,0 +1,61 @@
+{
+  "configuration": [
+    [
+      -4.0,
+      -2.0,
+      0.39269908169872414
+    ],
+    [
+      2.0,
+      4.0,
+      -0.7853981633974483
+    ],
+    [
+      -0.6713100112381098,
+      1.9711222284570131,
+      -0.19634954084936207
+    ],
+    [
+      2.978230260108247,
+      -4.0728223129686105,
+      0.19634954084936207
+    ],
+    [
+      -2.0613993455987094,
+      0.9105658143722861,
+      0.0
+    ],
+    [
+      -1.255645682538547,
+      -6.893119761727064,
+      0.5890486225480862
+    ],
+    [
+      -5.057190749119161,
+      -5.332467450702895,
+      0.7853981633974483
+    ],
+    [
+      2.3357016818391947,
+      2.418154045105519,
+      -0.39269908169872414
+    ],
+    [
+      7.8329789839226125,
+      7.3414392019341435,
+      -0.5890486225480862
+    ]
+  ],
+  "initial_spectral_radius": 1.8439088914585797,
+  "optimized_spectral_radius": 3.2602827180341087,
+  "objective_value": 72.57898152676816,
+  "min_degree_singular_value": 0.33570168183919424,
+  "min_signed_coordinate_separation": -3.3414392019341435,
+  "minimum_pairwise_distance": 1.617075212909312,
+  "success": false,
+  "message": "The solution does not satisfy the constraints, MAXCV = 4.141439201934143",
+  "iterations": 300,
+  "function_evaluations": 15000,
+  "seed": 52,
+  "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_52_configuration.npy"
+}
