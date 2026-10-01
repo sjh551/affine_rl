@@ -14,6 +14,7 @@ import shutil
 
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+MAX_GRAPH_AGENTS = 9
 RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf", "ranger_mini.urdf").replace("\\", "/")
 
 class FormationPyBulletEnv(gym.Env):
@@ -52,6 +53,12 @@ class FormationPyBulletEnv(gym.Env):
 
         # --- 初始化标称构型和权重 ---
         self.g_nom, self.edges = get_square_configuration(), get_square_topology()
+        if len(self.g_nom) > MAX_GRAPH_AGENTS:
+            raise ValueError(
+                f"Formation has {len(self.g_nom)} agents, but MAX_GRAPH_AGENTS="
+                f"{MAX_GRAPH_AGENTS}. Increase the fixed graph capacity before training."
+            )
+        self.max_graph_agents = MAX_GRAPH_AGENTS
         # 2. 构建全局大矩阵并进行 2D 降维分块
         self._init_global_matrices()
 
@@ -78,7 +85,21 @@ class FormationPyBulletEnv(gym.Env):
         self.observation_space = spaces.Dict({
             # 基础运动学状态 (1D 向量)
             "kinematics": spaces.Box(low=-np.inf, high=np.inf, shape=(kinematics_dim,), dtype=np.float32),
-            # 雷达 A 的状态: 3 个通道 (历史帧), 每个通道 180 个数值 
+            # Matrix-valued Laplacian, grouped as one 3-row token per agent.
+            # Padding keeps the observation shape identical when agent count changes.
+            "laplacian": spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(self.max_graph_agents, 3, 3 * self.max_graph_agents),
+                dtype=np.float32,
+            ),
+            "agent_mask": spaces.Box(
+                low=0.0,
+                high=1.0,
+                shape=(self.max_graph_agents,),
+                dtype=np.float32,
+            ),
+            # 雷达 A 的状态: 3 个通道 (历史帧), 每个通道 180 个数值
             "lidar_A": spaces.Box(low=0.0, high=1.0, shape=(self.in_channels, 60), dtype=np.float32),
             # 雷达 B 的状态
             "lidar_B": spaces.Box(low=0.0, high=1.0, shape=(self.in_channels, 60), dtype=np.float32)
@@ -116,7 +137,7 @@ class FormationPyBulletEnv(gym.Env):
 
     def _init_global_matrices(self):
         """
-        构建 9 个智能体的全局拉普拉斯矩阵，并剔除角度维度，进行分块
+        构建当前标称构型的矩阵值拉普拉斯矩阵，并按 leader/follower 分块。
         """
         # 1. 构建矩阵 M
         fg = FormationGraph(self.g_nom)
@@ -125,11 +146,11 @@ class FormationPyBulletEnv(gym.Env):
         # 转成 1D 数组方便矩阵相乘
         self.g_nom_flat = np.concatenate(self.g_nom) # shape: (18,)
         
-        # 矩阵分块 (Leaders: 前 6 行/列; Followers: 后 21 行/列)
+        # 矩阵分块 (leaders 在前，followers 在后)
         split_idx = self.n_leaders * 3 # 2 个 leader * 3D = 6
-        
-        self.M_ff = self.M_3d[split_idx:, split_idx:] # (21, 21)
-        self.M_fl = self.M_3d[split_idx:, :split_idx] # (21, 6)
+
+        self.M_ff = self.M_3d[split_idx:, split_idx:]
+        self.M_fl = self.M_3d[split_idx:, :split_idx]
         
         # 5. 提前求逆 (极大提升仿真速度)
         self.M_ff_inv = np.linalg.inv(self.M_ff)
@@ -673,14 +694,42 @@ class FormationPyBulletEnv(gym.Env):
             *follower_kinematics,
         
         ],dtype=np.float32)
+        laplacian_obs, agent_mask = self._get_laplacian_obs()
         # 返回字典结构
         obs = {
             "kinematics": kinematics_obs,
+            "laplacian": laplacian_obs,
+            "agent_mask": agent_mask,
             "lidar_A": stacked_lidar_A,
             "lidar_B": stacked_lidar_B
         }
         return obs
-    
+
+    def _get_laplacian_obs(self):
+        """Return a normalized, padded Laplacian and its active-agent mask."""
+        active_agents = self.num_robots
+        if active_agents > self.max_graph_agents:
+            raise RuntimeError(
+                f"Active agent count {active_agents} exceeds graph capacity "
+                f"{self.max_graph_agents}."
+            )
+
+        padded_dim = 3 * self.max_graph_agents
+        active_dim = 3 * active_agents
+        padded_matrix = np.zeros((padded_dim, padded_dim), dtype=np.float32)
+        active_matrix = self.M_3d[:active_dim, :active_dim]
+
+        scale = max(float(np.max(np.abs(self.M_3d))), 1.0)
+        padded_matrix[:active_dim, :active_dim] = active_matrix / scale
+
+        # Each token contains the three matrix rows belonging to one agent.
+        laplacian_obs = padded_matrix.reshape(
+            self.max_graph_agents, 3, padded_dim
+        )
+        agent_mask = np.zeros(self.max_graph_agents, dtype=np.float32)
+        agent_mask[:active_agents] = 1.0
+        return laplacian_obs, agent_mask
+
     def _compute_reward(self, center_pos, action, action_diff):
         reward = 0
         done = False

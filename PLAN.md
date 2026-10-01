@@ -106,6 +106,10 @@ python test.py --stage 3 --model outputs/models/ppo2_final_leader-best.zip --ren
 python test.py --stage 3 --stochastic --render
 python test.py --stage 2 --random-policy --no-plot --max-steps 100 --seed 0
 python test.py --stage 3 --output outputs/figures/pomdp_stage3.png --seed 0
+# Evaluate an explicit seed list and print aggregate statistics.
+python test.py --stage 3 --seeds 0 1 2 3 4 --no-plot
+# Evaluate 20 consecutive seeds (0 through 19) and save JSON metrics.
+python test.py --stage 3 --seed 0 --num-seeds 20 --no-plot --metrics-output outputs/pomdp_stage3_20_seeds.json
 ```
 
 ### Full-state MDP evaluation
@@ -118,6 +122,10 @@ python test_mdp.py --stage 3 --model outputs/models/mdp_ppo2_final_leader-best.z
 python test_mdp.py --stage 3 --stochastic --render
 python test_mdp.py --stage 2 --random-policy --no-plot --max-steps 100 --seed 0
 python test_mdp.py --stage 3 --output outputs/figures/mdp_stage3.png --seed 0
+# Evaluate an explicit seed list and print aggregate statistics.
+python test_mdp.py --stage 3 --seeds 0 1 2 3 4 --no-plot
+# Evaluate 20 consecutive seeds and save each trajectory plus JSON metrics.
+python test_mdp.py --stage 3 --seed 0 --num-seeds 20 --output outputs/figures/mdp_stage3.png --metrics-output outputs/mdp_stage3_20_seeds.json
 ```
 
 ### TensorBoard

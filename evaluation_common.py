@@ -1,5 +1,7 @@
 import argparse
 import json
+import sys
+from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -18,6 +20,16 @@ plt.rcParams["font.family"] = [
 ]
 plt.rcParams["axes.unicode_minus"] = False
 
+REASON_CATEGORIES = (
+    "Success",
+    "Crash_Obstacle",
+    "Crash_Team",
+    "Wall_Out",
+    "Timeout",
+    "EvaluationStepLimit",
+    "Unknown",
+)
+
 
 def parse_evaluation_args(description):
     parser = argparse.ArgumentParser(description=description)
@@ -27,14 +39,49 @@ def parse_evaluation_args(description):
         default=None,
         help="Model name or path; defaults to the selected stage model.",
     )
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Single seed, or the first seed used with --num-seeds.",
+    )
+    seed_group = parser.add_mutually_exclusive_group()
+    seed_group.add_argument(
+        "--seeds",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Evaluate explicit seeds, for example: --seeds 0 1 2 3 4.",
+    )
+    seed_group.add_argument(
+        "--num-seeds",
+        type=int,
+        default=None,
+        help="Evaluate consecutive seeds starting at --seed.",
+    )
     parser.add_argument("--max-steps", type=int, default=None)
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--stochastic", action="store_true")
     parser.add_argument("--random-policy", action="store_true")
     parser.add_argument("--no-plot", action="store_true")
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument(
+        "--metrics-output",
+        type=Path,
+        default=None,
+        help="Optional JSON path for per-seed metrics and aggregate statistics.",
+    )
     return parser.parse_args()
+
+
+def resolve_evaluation_seeds(args):
+    if args.seeds is not None:
+        return args.seeds
+    if args.num_seeds is not None:
+        if args.num_seeds < 1:
+            raise ValueError("--num-seeds must be at least 1.")
+        return list(range(args.seed, args.seed + args.num_seeds))
+    return [args.seed]
 
 
 def resolve_model_path(model_name):
@@ -76,10 +123,19 @@ def cross_track_error(point, start, target):
     return float(abs(cross_product) / route_length)
 
 
-def run_episode(env, model, args, expected_kinematics_dim, observation_name):
-    np.random.seed(args.seed)
-    env.action_space.seed(args.seed)
-    obs, _ = env.reset(seed=args.seed)
+def run_episode(
+    env,
+    model,
+    args,
+    seed,
+    expected_kinematics_dim,
+    observation_name,
+):
+    np.random.seed(seed)
+    env.action_space.seed(seed)
+    if model is not None:
+        model.set_random_seed(seed)
+    obs, _ = env.reset(seed=seed)
     kinematics = np.asarray(obs["kinematics"])
     expected_shape = (expected_kinematics_dim,)
     if kinematics.shape != expected_shape:
@@ -133,7 +189,7 @@ def run_episode(env, model, args, expected_kinematics_dim, observation_name):
         "stage": args.stage,
         "obstacles_enabled": bool(env.enable_obstacles),
         "followers_enabled": bool(env.enable_followers),
-        "seed": args.seed,
+        "seed": seed,
         "policy": "random" if args.random_policy else "ppo",
         "model": None if args.random_policy else args.model,
         "steps": steps,
@@ -159,6 +215,68 @@ def run_episode(env, model, args, expected_kinematics_dim, observation_name):
     return metrics, trajectories
 
 
+def normalize_reason(reason):
+    for category in REASON_CATEGORIES[:-1]:
+        if reason.startswith(category):
+            return category
+    return "Unknown"
+
+
+def summarize_episodes(episodes):
+    numeric_metrics = (
+        "steps",
+        "return",
+        "final_goal_distance",
+        "cross_track_error_mean",
+        "cross_track_error_max",
+        "action_change_mean",
+        "formation_error_mean",
+        "formation_error_max",
+        "reward_progress",
+        "reward_shape",
+        "reward_collision",
+        "reward_smooth",
+        "reward_time",
+    )
+    observed_reason_counts = Counter(
+        normalize_reason(episode["reason"]) for episode in episodes
+    )
+    episode_count = len(episodes)
+    reason_counts = {
+        reason: int(observed_reason_counts.get(reason, 0))
+        for reason in REASON_CATEGORIES
+    }
+    statistics = {}
+    for metric in numeric_metrics:
+        values = np.asarray([episode[metric] for episode in episodes], dtype=float)
+        statistics[metric] = {
+            "mean": float(np.mean(values)),
+            "std": float(np.std(values)),
+            "min": float(np.min(values)),
+            "max": float(np.max(values)),
+        }
+
+    return {
+        "num_episodes": episode_count,
+        "seeds": [episode["seed"] for episode in episodes],
+        "success_count": reason_counts["Success"],
+        "success_rate": float(reason_counts["Success"] / episode_count),
+        "reason_counts": reason_counts,
+        "reason_rates": {
+            reason: float(count / episode_count)
+            for reason, count in reason_counts.items()
+        },
+        "metrics": statistics,
+    }
+
+
+def seed_output_path(output_path, seed, multiple_seeds):
+    if output_path is None or not multiple_seeds:
+        return output_path
+    suffix = output_path.suffix or ".png"
+    return output_path.with_name(f"{output_path.stem}_seed{seed}{suffix}")
+
+
 def run_evaluation(
     env_class,
     stage_configs,
@@ -167,12 +285,13 @@ def run_evaluation(
     description,
 ):
     args = parse_evaluation_args(description)
+    seeds = resolve_evaluation_seeds(args)
+    multiple_seeds = len(seeds) > 1
     config = stage_configs[args.stage]
     args.model = args.model or config["model_name"]
 
     env = None
-    obstacle_footprints = []
-    wall_footprints = []
+    episodes = []
     try:
         model = None
         if not args.random_policy:
@@ -183,29 +302,68 @@ def run_evaluation(
             enable_obstacles=config["enable_obstacles"],
             enable_followers=config["enable_followers"],
         )
-        metrics, trajectories = run_episode(
-            env,
-            model,
-            args,
-            expected_kinematics_dim,
-            observation_name,
-        )
-        obstacle_footprints = capture_footprints(getattr(env, "obstacles", []))
-        wall_footprints = capture_footprints(getattr(env, "wall_ids", []))
+        if multiple_seeds and not args.no_plot and args.output is None:
+            print(
+                "Interactive plots are disabled for multi-seed evaluation. "
+                "Pass --output to save one image per seed.",
+                file=sys.stderr,
+            )
+
+        for index, seed in enumerate(seeds, start=1):
+            metrics, trajectories = run_episode(
+                env,
+                model,
+                args,
+                seed,
+                expected_kinematics_dim,
+                observation_name,
+            )
+            episodes.append(metrics)
+
+            should_plot = not args.no_plot and (
+                not multiple_seeds or args.output is not None
+            )
+            if should_plot:
+                output_path = seed_output_path(args.output, seed, multiple_seeds)
+                if output_path is not None:
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                plot_trajectory_and_formation(
+                    env=env,
+                    all_trajectories=trajectories,
+                    obstacle_footprints=capture_footprints(
+                        getattr(env, "obstacles", [])
+                    ),
+                    wall_footprints=capture_footprints(
+                        getattr(env, "wall_ids", [])
+                    ),
+                    output_path=(
+                        str(output_path) if output_path is not None else None
+                    ),
+                    show=output_path is None,
+                    title=f"Trajectory (seed={seed})",
+                )
+
+            if multiple_seeds:
+                print(
+                    f"Completed {index}/{len(seeds)}: seed={seed}, "
+                    f"reason={metrics['reason']}, return={metrics['return']:.3f}",
+                    file=sys.stderr,
+                )
     finally:
         if env is not None:
             env.close()
 
-    print(json.dumps(metrics, ensure_ascii=False, indent=2))
+    report = (
+        episodes[0]
+        if not multiple_seeds
+        else {
+            "summary": summarize_episodes(episodes),
+            "episodes": episodes,
+        }
+    )
+    report_json = json.dumps(report, ensure_ascii=False, indent=2)
+    print(report_json)
 
-    if not args.no_plot:
-        if args.output is not None:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-        plot_trajectory_and_formation(
-            env=env,
-            all_trajectories=trajectories,
-            obstacle_footprints=obstacle_footprints,
-            wall_footprints=wall_footprints,
-            output_path=str(args.output) if args.output is not None else None,
-            show=args.output is None,
-        )
+    if args.metrics_output is not None:
+        args.metrics_output.parent.mkdir(parents=True, exist_ok=True)
+        args.metrics_output.write_text(report_json + "\n", encoding="utf-8")

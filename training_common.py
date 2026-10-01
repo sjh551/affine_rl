@@ -15,6 +15,69 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from project_paths import ensure_output_dirs, model_load_path, model_save_base
 
 
+class LaplacianAttentionEncoder(nn.Module):
+    """Encode padded matrix-valued Laplacian rows with masked self-attention."""
+
+    def __init__(self, observation_shape, features_dim=32, num_heads=4):
+        super().__init__()
+        max_agents, rows_per_agent, matrix_width = observation_shape
+        if features_dim % num_heads != 0:
+            raise ValueError("features_dim must be divisible by num_heads.")
+
+        self.max_agents = max_agents
+        self.input_projection = nn.Linear(
+            rows_per_agent * matrix_width,
+            features_dim,
+        )
+        self.pool_token = nn.Parameter(th.zeros(1, 1, features_dim))
+        self.position_embedding = nn.Parameter(
+            th.zeros(1, max_agents + 1, features_dim)
+        )
+        self.input_norm = nn.LayerNorm(features_dim)
+        self.attention = nn.MultiheadAttention(
+            features_dim,
+            num_heads,
+            batch_first=True,
+        )
+        self.output_norm = nn.LayerNorm(features_dim)
+        self.feed_forward = nn.Sequential(
+            nn.Linear(features_dim, 2 * features_dim),
+            nn.ReLU(),
+            nn.Linear(2 * features_dim, features_dim),
+        )
+        nn.init.normal_(self.pool_token, std=0.02)
+        nn.init.normal_(self.position_embedding, std=0.02)
+
+    def forward(self, laplacian, agent_mask):
+        batch_size = laplacian.shape[0]
+        node_tokens = self.input_projection(
+            laplacian.reshape(batch_size, self.max_agents, -1)
+        )
+        pool_token = self.pool_token.expand(batch_size, -1, -1)
+        tokens = th.cat((pool_token, node_tokens), dim=1)
+        tokens = tokens + self.position_embedding
+
+        inactive_agents = agent_mask <= 0.5
+        pool_mask = th.zeros(
+            (batch_size, 1),
+            dtype=th.bool,
+            device=agent_mask.device,
+        )
+        key_padding_mask = th.cat((pool_mask, inactive_agents), dim=1)
+
+        normalized = self.input_norm(tokens)
+        attended, _ = self.attention(
+            normalized,
+            normalized,
+            normalized,
+            key_padding_mask=key_padding_mask,
+            need_weights=False,
+        )
+        tokens = tokens + attended
+        tokens = tokens + self.feed_forward(self.output_norm(tokens))
+        return self.output_norm(tokens[:, 0])
+
+
 class CustomCombinedExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space, pretrained_path=None, freeze_encoder=False):
         super().__init__(observation_space, features_dim=1)
@@ -22,8 +85,23 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         extractors = {}
         total_concat_size = 0
         self.lidar_modules = {}
+        self.laplacian_encoder = None
+
+        has_laplacian = "laplacian" in observation_space.spaces
+        has_agent_mask = "agent_mask" in observation_space.spaces
+        if has_laplacian != has_agent_mask:
+            raise ValueError(
+                "Observation space must provide both laplacian and agent_mask."
+            )
+        if has_laplacian:
+            self.laplacian_encoder = LaplacianAttentionEncoder(
+                observation_space["laplacian"].shape
+            )
+            total_concat_size += 32
 
         for key, subspace in observation_space.spaces.items():
+            if key in ("laplacian", "agent_mask"):
+                continue
             if key == "kinematics":
                 extractors[key] = nn.Identity()
                 total_concat_size += subspace.shape[0]
@@ -82,6 +160,13 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
             extractor(observations[key])
             for key, extractor in self.extractors.items()
         ]
+        if self.laplacian_encoder is not None:
+            encoded.append(
+                self.laplacian_encoder(
+                    observations["laplacian"],
+                    observations["agent_mask"],
+                )
+            )
         return th.cat(encoded, dim=1)
 
 
