@@ -5,6 +5,7 @@ import pybullet as p
 import pybullet_data
 import time
 import math
+from controllers.nominal_p_controller import NominalPController
 from utils.formation_graph import FormationGraph
 from utils.formation_utils import get_square_configuration, get_square_topology, get_nominal_configuration, get_topology
 import itertools
@@ -19,7 +20,8 @@ RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf"
 
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, enable_followers=True, hide_robots=False, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
-                 k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2):
+                 k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
+                 nominal_kp=0.5, nominal_speed_limit=0.4, residual_speed_limit=0.6):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -62,8 +64,9 @@ class FormationPyBulletEnv(gym.Env):
         # 2. 构建全局大矩阵并进行 2D 降维分块
         self._init_global_matrices()
 
-        # --- 动作空间 (6维) ---
-        # [LeaderA_Vx, LeaderA_Vy, LeaderA_omega, LeaderB_Vx, LeaderB_Vy, LeaderB_omega]  不需要角速度，角速度可以直接为0
+        # --- 动作空间：两台 leader 在目标对齐坐标系中的二维残差速度 ---
+        # [LeaderA_residual_vx, LeaderA_residual_vy,
+        #  LeaderB_residual_vx, LeaderB_residual_vy]
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
         
         self.n_nearest_obs = 16 # 最近的12个障碍物 + 四面墙 = 16 个观测点
@@ -113,8 +116,21 @@ class FormationPyBulletEnv(gym.Env):
         self.wheel_indices = [3,1,5,7] # 小车轮子关节索引
         self.steer_indices = [2,0,4,6] # 小车转向关节索引
 
-        self.max_vel = 1.0  # 最大线速度 1.5 m/s
+        self.max_vel = 1.0  # 最终二维速度命令上限 1.0 m/s
         self.max_omega = 1.0  # 最大角速度 1.0 rad/s
+        leader_nominal_positions = np.asarray(
+            self.g_nom[:self.n_leaders, :2],
+            dtype=np.float32,
+        )
+        self.leader_target_offsets = (
+            leader_nominal_positions - leader_nominal_positions.mean(axis=0)
+        )
+        self.nominal_controller = NominalPController(
+            kp=nominal_kp,
+            nominal_speed_limit=nominal_speed_limit,
+            residual_speed_limit=residual_speed_limit,
+            command_speed_limit=self.max_vel,
+        )
         self.wheel_radius = 0.09  # 轮半径，m
         self.half_horizon = 0.25 # 水平的一半长
         self.half_vertical = 0.19 # 垂直的一半
@@ -258,6 +274,9 @@ class FormationPyBulletEnv(gym.Env):
         self.last_vels = [np.zeros(3) for _ in range(self.num_robots)]
         # 重置上一帧动作 (用于计算动作平滑度)
         self.last_action = np.zeros(self.action_space.shape)
+        self.last_nominal_velocity = np.zeros((self.n_leaders, 2), dtype=np.float32)
+        self.last_residual_velocity = np.zeros((self.n_leaders, 2), dtype=np.float32)
+        self.last_leader_command = np.zeros((self.n_leaders, 2), dtype=np.float32)
         # 初始化距离记录 (用两车中点计算)
         center_pos = self._get_center_pos()
 
@@ -298,36 +317,63 @@ class FormationPyBulletEnv(gym.Env):
 
     def step(self, action):
         # print(action)
-        # 当前动作为小车目标坐标系下的动作，不是小车自身坐标系的动作
+        # PPO 输出目标对齐坐标系下的残差速度，不是完整速度命令。
         self.current_step += 1
 
         # Reward and next observation must use the post-action center.
         # vec_to_goal = self.target_pos[:2] - center_pos[:2]
         # dist_to_goal = np.linalg.norm(vec_to_goal)
 
+        action = np.asarray(action, dtype=np.float32)
+        if action.shape != self.action_space.shape:
+            raise ValueError(
+                f"Expected action shape {self.action_space.shape}, got {action.shape}."
+            )
+        action = np.clip(action, self.action_space.low, self.action_space.high)
         action_diff = action - self.last_action
         self.last_action = action.copy()
-        
-        # 提取 Leader A 的线速度和角速度
-        vAx = action[0] * self.max_vel
-        vAy = action[1] * self.max_vel
-        wA = 0.0
 
-        # 提取 Leader B 的线速度和角速度
-        vBx = action[2] * self.max_vel
-        vBy = action[3] * self.max_vel
-        wB = 0.0
+        leader_positions = []
+        leader_yaws = []
+        for robot_id in self.robot_ids[:self.n_leaders]:
+            position, quaternion = p.getBasePositionAndOrientation(robot_id)
+            leader_positions.append(position[:2])
+            leader_yaws.append(p.getEulerFromQuaternion(quaternion)[2])
 
-        # print(abs(wA) + abs(wB))
+        nominal_world = self.nominal_controller.compute_nominal(
+            leader_positions,
+            self.target_pos[:2],
+            self.leader_target_offsets,
+        )
+        residual_target = self.nominal_controller.scale_residual(
+            action.reshape(self.n_leaders, 2)
+        )
+        target_cos = np.cos(self.last_target_yaw)
+        target_sin = np.sin(self.last_target_yaw)
+        target_to_world = np.array(
+            [[target_cos, -target_sin], [target_sin, target_cos]],
+            dtype=np.float32,
+        )
+        residual_world = (target_to_world @ residual_target.T).T
+        leader_commands_world = self.nominal_controller.combine(
+            nominal_world,
+            residual_world,
+        )
 
-        vAx_body = vAx * self._cosA - vAy * self._sinA
-        vAy_body = vAx * self._sinA + vAy * self._cosA
-        vBx_body = vBx * self._cosB - vBy * self._sinB
-        vBy_body = vBx * self._sinB + vBy * self._cosB
+        self.last_nominal_velocity = nominal_world.copy()
+        self.last_residual_velocity = residual_world.copy()
+        self.last_leader_command = leader_commands_world.copy()
 
-        # 驱动 leaders
-        self._drive_robot(self.robot_ids[0], vAx_body, vAy_body, wA)
-        self._drive_robot(self.robot_ids[1], vBx_body, vBy_body, wB)
+        for robot_id, yaw, command_world in zip(
+            self.robot_ids[:self.n_leaders],
+            leader_yaws,
+            leader_commands_world,
+        ):
+            yaw_cos = np.cos(yaw)
+            yaw_sin = np.sin(yaw)
+            command_body_x = yaw_cos * command_world[0] + yaw_sin * command_world[1]
+            command_body_y = -yaw_sin * command_world[0] + yaw_cos * command_world[1]
+            self._drive_robot(robot_id, command_body_x, command_body_y, 0.0)
 
         # --- 2. Follower 控制 (外部算法接口) ---
         # 获取当前所有机器人的状态传给算法
@@ -1183,11 +1229,9 @@ class FormationPyBulletEnv(gym.Env):
         return states
 
     def _get_center_pos(self):
-        """
-        计算编队中心点，只算了领导者，感觉算了跟随者不好估计
-        """
+        """Return the leader centroid used by navigation and success checks."""
         pos_list = []
-        for robot_id in self.robot_ids[:self.num_robots]:
+        for robot_id in self.robot_ids[:self.n_leaders]:
             pos, _ = p.getBasePositionAndOrientation(robot_id)
             pos_list.append(np.array(pos))
         center = np.mean(pos_list, axis=0)
