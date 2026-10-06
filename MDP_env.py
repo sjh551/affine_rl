@@ -21,7 +21,10 @@ RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf"
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, enable_followers=True, hide_robots=False, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
                  k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
-                 nominal_kp=0.5, nominal_speed_limit=0.4, residual_speed_limit=0.6):
+                 nominal_kp=0.5, nominal_speed_limit=0.4, residual_speed_limit=0.6,
+                 residual_effort_weight=0.02, residual_smooth_weight=0.01,
+                 obstacle_warning_distance=1.2, obstacle_clearance_weight=0.5,
+                 obstacle_crash_penalty=100.0):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -32,6 +35,22 @@ class FormationPyBulletEnv(gym.Env):
         self.k_smooth_linear = k_smooth_linear
         # self.k_omega_limit = k_omega_limit
         self.k_path_cost = k_path_cost
+        self.residual_effort_weight = float(residual_effort_weight)
+        self.residual_smooth_weight = float(residual_smooth_weight)
+        self.obstacle_warning_distance = float(obstacle_warning_distance)
+        self.obstacle_clearance_weight = float(obstacle_clearance_weight)
+        self.obstacle_crash_penalty = float(obstacle_crash_penalty)
+        self.residual_release_distance = self.obstacle_warning_distance + 0.6
+
+        if self.obstacle_warning_distance <= 0.03:
+            raise ValueError("obstacle_warning_distance must exceed 0.03 m.")
+        if min(
+            self.residual_effort_weight,
+            self.residual_smooth_weight,
+            self.obstacle_clearance_weight,
+            self.obstacle_crash_penalty,
+        ) < 0.0:
+            raise ValueError("Reward weights must be non-negative.")
 
         # --- 1. PyBullet 初始化配置 ---
         self.render_mode = render_mode
@@ -785,8 +804,6 @@ class FormationPyBulletEnv(gym.Env):
         # --- 1. 进度奖励 ---
         vec_to_goal = self.target_pos[:2] - center_pos[:2]
         dist_to_goal = np.linalg.norm(vec_to_goal)
-        dir_to_goal = vec_to_goal / (dist_to_goal + 1e-8) # 加 1e-8 防止除以 0
-
         if not hasattr(self, 'last_center_dist'): self.last_center_dist = dist_to_goal
 
         pos_A, quat_A = p.getBasePositionAndOrientation(self.robot_ids[0])
@@ -798,11 +815,8 @@ class FormationPyBulletEnv(gym.Env):
 
         vel_A, _ = p.getBaseVelocity(self.robot_ids[0])
         vA_vec = np.array(vel_A[:2])
-        speed_A = np.linalg.norm(vA_vec)
-
         vel_B, _ = p.getBaseVelocity(self.robot_ids[1])
         vB_vec = np.array(vel_B[:2])
-        speed_B = np.linalg.norm(vB_vec)
 
         # 3. 编队误差状态
         actual_vec = pA_3d[:2] - pB_3d[:2]
@@ -836,38 +850,13 @@ class FormationPyBulletEnv(gym.Env):
 
 
         # =========================================================
-        # [3] 动作平滑与路径跟踪惩罚 (Smoothness & Path)    去掉这个惩罚好像没有什么影响
+        # [3] Residual regularization
         # =========================================================
-        r_smooth = 0.0
-
-        # A. 速度朝向一致性 (距离目标较远时鼓励朝向目标)
-
-        if dist_to_goal > 2.0:
-            if speed_A > 0.1:
-                r_smooth -= self.k_vel_align * (1.0 - np.dot(vA_vec / (speed_A + 1e-8), dir_to_goal))
-            if speed_B > 0.1:
-                r_smooth -= self.k_vel_align * (1.0 - np.dot(vB_vec / (speed_B + 1e-8), dir_to_goal))
-        
-        # A. 动作变化率惩罚 (防抽搐)
-        # dvA_linear_sq = np.dot(action_diff[0:2], action_diff[0:2])
-        # dvB_linear_sq = np.dot(action_diff[2:4], action_diff[2:4])
-        # r_smooth -= self.k_smooth_linear * (dvA_linear_sq + dvB_linear_sq)
-
-        # lateral_action_cost = action[1] ** 2 + action[3] ** 2
-        # r_smooth -= 0.1 * lateral_action_cost
-
-        # R_vec = center_pos[:2] - self.start_center[:2]
-        # cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
-        # cte = cross_product / self.L_norm
-        # r_smooth -= self.k_path_cost * cte
-
-
-        # # B. 路径横向偏差惩罚 (Cross Track Error)
-        # R_vec = center_pos[:2] - self.start_center[:2]
-        # cross_product = abs(self.L[0] * R_vec[1] - self.L[1] * R_vec[0])
-        # cte = cross_product / self.L_norm
-        # # print(cte)
-        # r_smooth -= self.k_path_cost * cte
+        # The nominal P controller already points toward the goal. Penalizing
+        # lateral velocity here would directly oppose a useful avoidance residual.
+        r_smooth = -self.residual_smooth_weight * float(
+            np.dot(action_diff, action_diff)
+        )
 
 
         # =========================================================
@@ -877,8 +866,7 @@ class FormationPyBulletEnv(gym.Env):
         
         k_wall_crash = 50.0      # 撞墙惩罚
         k_team_crash = 50.0      # 互撞惩罚
-        k_obs_crash = 50.0       # 撞障碍物惩罚
-        k_repulsion_base = 0.1   # 势场排斥力基数
+        k_obs_crash = self.obstacle_crash_penalty
         
         # 预先推算 Followers 估计位置 (用于避障预警)
         if self.active_n_followers > 0 and self.enable_obstacles:
@@ -938,42 +926,60 @@ class FormationPyBulletEnv(gym.Env):
                     reason = "Crash_Team"
                     break
 
-        # C. 障碍物碰撞与斥力势场
+        # C. 障碍物碰撞与连续安全距离势垒
+        minimum_surface_distance = np.inf
         if self.enable_obstacles and not done:
-            crash_threshold = 0.05  # 表面距离小于 5cm 认为撞毁
-            warn_threshold = 0.35   # 表面距离小于 35cm 开始施加斥力       
             crash_threshold = 0.03
-            warn_threshold = 0.50
-            
-            # 遍历所有机器人
+            warn_threshold = self.obstacle_warning_distance
+            query_distance = self.residual_release_distance
+
             for i, robot_id in enumerate(self.robot_ids):
-                # 遍历所有障碍物
+                robot_min_distance = np.inf
                 for obs_id in self.obstacles:
-                    
-                    # 查询机器人与该障碍物之间，距离在 warn_threshold 以内的最近点信息
-                    # 如果距离大于 warn_threshold，直接返回空列表
-                    closest_points = p.getClosestPoints(bodyA=robot_id, bodyB=obs_id, distance=warn_threshold)
-                    
-                    if len(closest_points) > 0:
-                        # closest_points 是一个列表，里面可能包含多个接近点的信息
-                        # 返回结果的第 8 个元素 (index 8) 是这两个点之间的直线物理距离
-                        # 我们取出其中最小的距离
-                        min_surface_dist = min([pt[8] for pt in closest_points])
-                        
-                        # --- 1. 致命碰撞判定 ---
-                        if min_surface_dist <= crash_threshold:
-                            r_collision -= k_obs_crash
-                            done = True
-                            reason = f"Crash_Obstacle (Bot {i} hit wall)"
-                            break  # 撞死了就跳出障碍物循环
-                            
-                        # --- 2. 预警斥力判定 ---
-                        elif min_surface_dist < warn_threshold:
-                            # 距离越小（越接近 crash_threshold），斥力越大
-                            r_collision -= k_repulsion_base * (1.0 / max(min_surface_dist, 0.01) - 1.0 / warn_threshold)
-                        # print(min_surface_dist, r_collision, end="\r")
-                if done: 
-                    break # 如果其中一台车撞死了，结束整个回合
+                    closest_points = p.getClosestPoints(
+                        bodyA=robot_id,
+                        bodyB=obs_id,
+                        distance=query_distance,
+                    )
+                    if closest_points:
+                        robot_min_distance = min(
+                            robot_min_distance,
+                            min(point[8] for point in closest_points),
+                        )
+
+                minimum_surface_distance = min(
+                    minimum_surface_distance,
+                    robot_min_distance,
+                )
+                if robot_min_distance <= crash_threshold:
+                    r_collision -= k_obs_crash
+                    done = True
+                    reason = f"Crash_Obstacle (Bot {i} hit wall)"
+                    break
+
+                if robot_min_distance < warn_threshold:
+                    proximity = (
+                        warn_threshold - robot_min_distance
+                    ) / warn_threshold
+                    r_collision -= self.obstacle_clearance_weight * proximity ** 2
+
+        # In open space the optimal residual is zero and the nominal controller
+        # should dominate. Close to obstacles this cost vanishes continuously so
+        # PPO retains its full authority to brake, move sideways, or temporarily
+        # move away from the goal.
+        if minimum_surface_distance <= self.obstacle_warning_distance:
+            open_space_gate = 0.0
+        elif minimum_surface_distance < self.residual_release_distance:
+            open_space_gate = (
+                minimum_surface_distance - self.obstacle_warning_distance
+            ) / (
+                self.residual_release_distance - self.obstacle_warning_distance
+            )
+        else:
+            open_space_gate = 1.0
+        r_smooth -= self.residual_effort_weight * open_space_gate * float(
+            np.dot(action, action)
+        )
        
 
         # =========================================================
