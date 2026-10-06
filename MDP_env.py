@@ -5,7 +5,11 @@ import pybullet as p
 import pybullet_data
 import time
 import math
-from controllers.nominal_p_controller import NominalPController
+from controllers import (
+    PathTrackingController,
+    ResidualVelocityMixer,
+    ThetaStarPlanner,
+)
 from utils.formation_graph import FormationGraph
 from utils.formation_utils import get_square_configuration, get_square_topology, get_nominal_configuration, get_topology
 import itertools
@@ -24,7 +28,8 @@ class FormationPyBulletEnv(gym.Env):
                  nominal_kp=0.5, nominal_speed_limit=0.4, residual_speed_limit=0.6,
                  residual_effort_weight=0.02, residual_smooth_weight=0.01,
                  obstacle_warning_distance=1.2, obstacle_clearance_weight=0.5,
-                 obstacle_crash_penalty=100.0):
+                 obstacle_crash_penalty=100.0, planner_resolution=0.25,
+                 planner_inflation_radius=0.45, path_lookahead_distance=1.0):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -99,10 +104,10 @@ class FormationPyBulletEnv(gym.Env):
         self.lidar_buffer_B = deque(maxlen=self.frame_len)
 
         # 运动学特征 (距离, 相对向量, 速度, 姿态) 
-        # Base leader/goal features: 22. Each follower contributes
+        # Base leader/goal/path features: 26. Each follower contributes
         # [relative x/y, velocity x/y, sin(yaw error), cos(yaw error), yaw rate].
         self.follower_state_dim = 7
-        kinematics_dim = 22 + self.n_followers * self.follower_state_dim
+        kinematics_dim = 26 + self.n_followers * self.follower_state_dim
 
         self.observation_space = spaces.Dict({
             # 基础运动学状态 (1D 向量)
@@ -144,9 +149,12 @@ class FormationPyBulletEnv(gym.Env):
         self.leader_target_offsets = (
             leader_nominal_positions - leader_nominal_positions.mean(axis=0)
         )
-        self.nominal_controller = NominalPController(
+        self.path_controller = PathTrackingController(
             kp=nominal_kp,
-            nominal_speed_limit=nominal_speed_limit,
+            speed_limit=nominal_speed_limit,
+            lookahead_distance=path_lookahead_distance,
+        )
+        self.residual_mixer = ResidualVelocityMixer(
             residual_speed_limit=residual_speed_limit,
             command_speed_limit=self.max_vel,
         )
@@ -156,9 +164,22 @@ class FormationPyBulletEnv(gym.Env):
 
         self.safe_margin = 0.7 # 设定的agent之间的警戒距离
         self.obstacles = []
+        self.obstacle_config_id = None
         self.max_steps = 1500
         self.wall_length = 20.0 # 墙的长度的一半
         self.wall_width = 10.0 # 墙的宽度的一半
+        planner_boundary_margin = 1.1
+        self.path_planner = ThetaStarPlanner(
+            bounds=(
+                -self.wall_length + planner_boundary_margin,
+                self.wall_length - planner_boundary_margin,
+                -self.wall_width + planner_boundary_margin,
+                self.wall_width - planner_boundary_margin,
+            ),
+            resolution=planner_resolution,
+            inflation_radius=planner_inflation_radius,
+        )
+        self.leader_paths = []
         self.enable_obstacles = enable_obstacles
         self.last_center_dist = None
         # 用于可视化的线段ID
@@ -169,6 +190,38 @@ class FormationPyBulletEnv(gym.Env):
 
         if not hasattr(self, 'last_follower_vels'):
             self.last_follower_vels = [np.zeros(3) for _ in range(self.n_followers)]
+
+    def _plan_leader_paths(self):
+        """Adapt PyBullet obstacle geometry to reusable Theta* paths."""
+        obstacle_aabbs = []
+        for obstacle_id in self.obstacles:
+            lower, upper = p.getAABB(obstacle_id)
+            obstacle_aabbs.append((lower[0], lower[1], upper[0], upper[1]))
+        self.path_planner.update_obstacles(obstacle_aabbs)
+
+        starts = np.asarray([
+            p.getBasePositionAndOrientation(robot_id)[0][:2]
+            for robot_id in self.robot_ids[:self.n_leaders]
+        ], dtype=np.float32)
+        goals = self.target_pos[:2] + self.leader_target_offsets
+        self.leader_paths = [
+            self.path_planner.plan(start, goal)
+            for start, goal in zip(starts, goals)
+        ]
+        self.path_controller.set_paths(self.leader_paths)
+
+    def _draw_leader_paths(self):
+        if not self.render_mode:
+            return
+        colors = ([1.0, 0.2, 0.2], [0.2, 0.4, 1.0])
+        for path, color in zip(self.leader_paths, colors):
+            for start, end in zip(path[:-1], path[1:]):
+                p.addUserDebugLine(
+                    [start[0], start[1], 0.05],
+                    [end[0], end[1], 0.05],
+                    lineColorRGB=color,
+                    lineWidth=2.0,
+                )
 
     def _init_global_matrices(self):
         """
@@ -200,8 +253,8 @@ class FormationPyBulletEnv(gym.Env):
         self._create_walls()
 
         # --- 随机生成目标点 ---
-        tx = np.random.uniform(self.wall_length-4.5, self.wall_length-4.0)
-        ty = np.random.uniform(-self.wall_width+6.0, self.wall_width-6.0)
+        tx = self.np_random.uniform(self.wall_length-4.5, self.wall_length-4.0)
+        ty = self.np_random.uniform(-self.wall_width+6.0, self.wall_width-6.0)
         self.target_pos = np.array([tx, ty, 0])
         self._create_visual_sphere(self.target_pos, [0, 1, 0, 0.5])
 
@@ -210,8 +263,8 @@ class FormationPyBulletEnv(gym.Env):
         
         # 1. 随机生成一个队伍的起跑中心点
         self.start_center = np.array([
-            np.random.uniform(-self.wall_length + 6.0, -self.wall_length + 6.2),
-            np.random.uniform(-2.0, 2.0)
+            self.np_random.uniform(-self.wall_length + 6.0, -self.wall_length + 6.2),
+            self.np_random.uniform(-2.0, 2.0)
         ])
 
         self.L = self.target_pos[:2] - self.start_center[:2]
@@ -273,6 +326,7 @@ class FormationPyBulletEnv(gym.Env):
             self._generate_obstacles()
         else:
             self.obstacles = [] # 确保列表为空
+            self.obstacle_config_id = None
         for _ in range(100):
             for rid in self.robot_ids:
                 # 强制方向盘回正
@@ -287,13 +341,21 @@ class FormationPyBulletEnv(gym.Env):
                 )
             p.stepSimulation()
 
+        self._plan_leader_paths()
+
         self.current_step = 0
 
         # --- 初始化上一帧的速度记录 ---
         self.last_vels = [np.zeros(3) for _ in range(self.num_robots)]
         # 重置上一帧动作 (用于计算动作平滑度)
         self.last_action = np.zeros(self.action_space.shape)
-        self.last_nominal_velocity = np.zeros((self.n_leaders, 2), dtype=np.float32)
+        leader_positions = np.asarray([
+            p.getBasePositionAndOrientation(robot_id)[0][:2]
+            for robot_id in self.robot_ids[:self.n_leaders]
+        ], dtype=np.float32)
+        self.last_nominal_velocity = self.path_controller.compute_nominal(
+            leader_positions
+        )
         self.last_residual_velocity = np.zeros((self.n_leaders, 2), dtype=np.float32)
         self.last_leader_command = np.zeros((self.n_leaders, 2), dtype=np.float32)
         # 初始化距离记录 (用两车中点计算)
@@ -320,6 +382,7 @@ class FormationPyBulletEnv(gym.Env):
         # 清除旧的线
         p.removeAllUserDebugItems()
         self.debug_line_ids = []
+        self._draw_leader_paths()
         self.ep_rew_progress = 0.0   # 进度得分
         self.ep_rew_shape = 0.0      # 队形弹簧扣分
         self.ep_rew_collision = 0.0  # 碰撞扣分
@@ -332,7 +395,7 @@ class FormationPyBulletEnv(gym.Env):
         self.is_frame_locked = False
         self.locked_target_yaw = 0.0
         
-        return obs, {}
+        return obs, {"obstacle_config_id": self.obstacle_config_id}
 
     def step(self, action):
         # print(action)
@@ -359,12 +422,8 @@ class FormationPyBulletEnv(gym.Env):
             leader_positions.append(position[:2])
             leader_yaws.append(p.getEulerFromQuaternion(quaternion)[2])
 
-        nominal_world = self.nominal_controller.compute_nominal(
-            leader_positions,
-            self.target_pos[:2],
-            self.leader_target_offsets,
-        )
-        residual_target = self.nominal_controller.scale_residual(
+        nominal_world = self.path_controller.compute_nominal(leader_positions)
+        residual_target = self.residual_mixer.scale_residual(
             action.reshape(self.n_leaders, 2)
         )
         target_cos = np.cos(self.last_target_yaw)
@@ -374,7 +433,7 @@ class FormationPyBulletEnv(gym.Env):
             dtype=np.float32,
         )
         residual_world = (target_to_world @ residual_target.T).T
-        leader_commands_world = self.nominal_controller.combine(
+        leader_commands_world = self.residual_mixer.combine(
             nominal_world,
             residual_world,
         )
@@ -448,6 +507,7 @@ class FormationPyBulletEnv(gym.Env):
             )
             info['outcome_wall_out'] = float(reason.startswith('Wall_Out'))
             info['outcome_timeout'] = float(reason == 'Timeout')
+            info['obstacle_config_id'] = self.obstacle_config_id
 
         # 更新上一帧速度
         for i, rid in enumerate(self.robot_ids):
@@ -666,6 +726,8 @@ class FormationPyBulletEnv(gym.Env):
         # B. 速度向量 (也必须转！否则网络不知道是侧身走还是直走)
         vA_body = R @ vA
         vB_body = R @ vB
+        nominal_A_body = R @ self.last_nominal_velocity[0]
+        nominal_B_body = R @ self.last_nominal_velocity[1]
 
         # D. Leader A 和 B 的位置 (转到 Body Frame)
         pos_A_body = R @ (pA - center_pos)
@@ -752,8 +814,12 @@ class FormationPyBulletEnv(gym.Env):
             self._sinB, self._cosB, w_B,
 
             # 让网络拥有肌肉记忆
-            self.last_action[0], self.last_action[1], 
+            self.last_action[0], self.last_action[1],
             self.last_action[2], self.last_action[3],
+
+            # Nominal path commands observed by the residual policy (4 values).
+            nominal_A_body[0], nominal_A_body[1],
+            nominal_B_body[0], nominal_B_body[1],
 
             # Exact follower states (7 values per follower).
             *follower_kinematics,
@@ -1081,7 +1147,8 @@ class FormationPyBulletEnv(gym.Env):
 
     def _generate_obstacles(self):
         self.obstacles = []
-        config_id = np.random.randint(0, 5)
+        config_id = int(self.np_random.integers(0, 5))
+        self.obstacle_config_id = config_id
         
         v_shape = p.createVisualShape(p.GEOM_CYLINDER, radius=0.5, length=1.5, rgbaColor=[0.2, 0.2, 0.2, 1])
         c_shape = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.5, height=1.5)
@@ -1185,8 +1252,8 @@ class FormationPyBulletEnv(gym.Env):
         elif config_id == 3:
             # --- 配置 5：动态泊松盘（稀疏森林） ---
             while len(pos_list) < 6: # 生成 6 根柱子
-                ox = np.random.uniform(mid_x_min, mid_x_max)
-                oy = np.random.uniform(-mid_y_range, mid_y_range)
+                ox = self.np_random.uniform(mid_x_min, mid_x_max)
+                oy = self.np_random.uniform(-mid_y_range, mid_y_range)
                 
                 is_far_enough = True
                 for p_exist in pos_list:
@@ -1200,8 +1267,8 @@ class FormationPyBulletEnv(gym.Env):
         else:
             # --- 配置 5：动态泊松盘（稀疏森林） ---
             while len(pos_list) < 10: # 生成 10 根柱子
-                ox = np.random.uniform(mid_x_min, mid_x_max)
-                oy = np.random.uniform(-mid_y_range, mid_y_range)
+                ox = self.np_random.uniform(mid_x_min, mid_x_max)
+                oy = self.np_random.uniform(-mid_y_range, mid_y_range)
                 
                 is_far_enough = True
                 for p_exist in pos_list:

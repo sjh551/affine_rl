@@ -7,7 +7,7 @@ def main():
     run_evaluation(
         env_class=FormationPyBulletEnv,
         stage_configs=STAGE_CONFIGS,
-        expected_kinematics_dim=36,
+        expected_kinematics_dim=40,
         observation_name="full_state_mdp",
         description="Evaluate PPO in the full-state MDP environment.",
     )

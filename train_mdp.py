@@ -41,7 +41,7 @@ def main():
     run_training(
         env_class=FormationPyBulletEnv,
         stage_configs=STAGE_CONFIGS,
-        expected_kinematics_dim=36,
+        expected_kinematics_dim=40,
         checkpoint_dir=MDP_CHECKPOINT_DIR,
         description="Train PPO with full follower-state observations.",
     )
