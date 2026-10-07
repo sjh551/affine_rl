@@ -116,7 +116,7 @@ python test.py --stage 3 --seed 0 --num-seeds 20 --no-plot --metrics-output outp
 
 ```powershell
 python test_mdp.py --stage 1 --render
-python test_mdp.py --stage 2 --render --seed 1  # 0 2 3 4 12
+python test_mdp.py --stage 2 --render --seed 1  # 0 2 3 5 12
 python test_mdp.py --stage 3 --render
 python test_mdp.py --stage 3 --model outputs/models/mdp_ppo2_final_leader-best.zip --render
 python test_mdp.py --stage 3 --stochastic --render
