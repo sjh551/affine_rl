@@ -1,0 +1,92 @@
+{
+  "seed": 2,
+  "status": "success",
+  "iterations": 1131,
+  "accepted_nodes": 440,
+  "raw_waypoints": 26,
+  "shortcut_waypoints": 4,
+  "dense_collision_checked_states": 185,
+  "total_collision_checks": 4310,
+  "continuous_edge_checks": 1156,
+  "direct_start_goal_edge_free": false,
+  "continuous_sweep_model": "disc agents against radius-inflated AABBs",
+  "edge_resolution_m": 0.1,
+  "robot_radius_m": 0.28,
+  "minimum_agent_gap_m": 0.05,
+  "min_obstacle_clearance": 0.3175744667123591,
+  "min_interagent_clearance": 0.9073686732347714,
+  "min_s_x": 0.4628434637306237,
+  "max_s_x": 1.0,
+  "min_s_y": 0.28463513217781644,
+  "max_s_y": 1.0,
+  "tau_x_span": 15.0,
+  "tau_y_span": 0.1579280620252976,
+  "start_z": [
+    1.0,
+    1.0,
+    -7.5,
+    0.0
+  ],
+  "goal_z": [
+    1.0,
+    1.0,
+    7.5,
+    0.0
+  ],
+  "nominal_positions": [
+    [
+      3.0,
+      1.0
+    ],
+    [
+      1.0,
+      -3.0
+    ],
+    [
+      -1.0,
+      3.0
+    ],
+    [
+      -3.0,
+      -1.0
+    ]
+  ],
+  "z_bounds": [
+    [
+      0.25,
+      1.15
+    ],
+    [
+      0.25,
+      1.15
+    ],
+    [
+      -7.5,
+      7.5
+    ],
+    [
+      -2.0,
+      2.0
+    ]
+  ],
+  "workspace_bounds": [
+    -12.0,
+    12.0,
+    -6.0,
+    6.0
+  ],
+  "obstacles": [
+    [
+      -0.55,
+      0.55,
+      -6.0,
+      -1.6
+    ],
+    [
+      -0.55,
+      0.55,
+      1.6,
+      6.0
+    ]
+  ]
+}

@@ -294,7 +294,15 @@ def parse_training_args(description):
     parser.add_argument("--num-envs", type=int, default=8)
     parser.add_argument("--timesteps", type=int, default=None)
     parser.add_argument("--device", default="cuda")
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help=(
+            "Base environment seed. Defaults to 0 for a new stage and must be "
+            "specified explicitly when continuing the same stage."
+        ),
+    )
     parser.add_argument(
         "--resume-from",
         default=None,
@@ -304,6 +312,15 @@ def parse_training_args(description):
         "--from-scratch",
         action="store_true",
         help="Disable automatic previous-stage initialization.",
+    )
+    parser.add_argument(
+        "--continue-training",
+        action="store_true",
+        help=(
+            "Continue the current stage model and TensorBoard curve without "
+            "resetting timesteps. May be combined with --resume-from for a "
+            "same-stage checkpoint."
+        ),
     )
     parser.add_argument(
         "--smoke",
@@ -345,6 +362,15 @@ def existing_model_path(name_or_path):
     return str(resolved)
 
 
+def is_current_stage_model(name_or_path, current_model_name):
+    """Recognize the saved model of the stage being trained."""
+    if name_or_path is None:
+        return False
+    candidate = Path(model_load_path(name_or_path)).stem
+    current = Path(current_model_name).stem
+    return candidate == current
+
+
 def rollout_parameters(num_envs, smoke):
     if smoke:
         return 64, 64
@@ -367,10 +393,33 @@ def run_training(
     args = parse_training_args(description)
     if args.num_envs < 1:
         raise ValueError("--num-envs must be at least 1.")
-    if args.from_scratch and args.resume_from:
-        raise ValueError("Use either --from-scratch or --resume-from, not both.")
+    if args.from_scratch and (args.resume_from or args.continue_training):
+        raise ValueError(
+            "--from-scratch cannot be combined with --resume-from or "
+            "--continue-training."
+        )
+    if args.smoke and args.continue_training:
+        raise ValueError("Do not append a smoke test to a real training run.")
 
     config = stage_configs[args.stage]
+    resume_from = args.resume_from
+    if args.continue_training and resume_from is None:
+        resume_from = config["model_name"]
+    elif not args.from_scratch and resume_from is None:
+        resume_from = config["default_resume"]
+
+    continue_same_stage = args.continue_training or is_current_stage_model(
+        resume_from,
+        config["model_name"],
+    )
+    if args.seed is None:
+        if continue_same_stage:
+            raise ValueError(
+                "Same-stage continuation requires an explicit new --seed to "
+                "avoid replaying the previous environment sequence."
+            )
+        args.seed = 0
+
     ensure_output_dirs()
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     for stage_config in stage_configs.values():
@@ -393,13 +442,11 @@ def run_training(
                 f"Expected kinematics shape ({expected_kinematics_dim},), got {shape}."
             )
 
-        resume_from = args.resume_from
-        if not args.from_scratch and resume_from is None:
-            resume_from = config["default_resume"]
-
         print(
             f"Stage {args.stage}: obstacles={config['enable_obstacles']}, "
-            f"followers={config['enable_followers']}, resume={resume_from}"
+            f"followers={config['enable_followers']}, resume={resume_from}, "
+            f"continue={continue_same_stage}, env_seeds="
+            f"{args.seed}..{args.seed + args.num_envs - 1}"
         )
         training_kwargs = ppo_training_kwargs(args.stage)
         common_kwargs = {
@@ -408,6 +455,7 @@ def run_training(
             "n_steps": n_steps,
             "tensorboard_log": str(config["tensorboard_dir"]),
             "device": args.device,
+            "seed": args.seed,
             **training_kwargs,
         }
 
@@ -418,7 +466,6 @@ def run_training(
                 "MultiInputPolicy",
                 policy_kwargs=policy_kwargs(),
                 verbose=1,
-                seed=args.seed,
                 **common_kwargs,
             )
 
@@ -439,6 +486,7 @@ def run_training(
             total_timesteps=total_timesteps,
             callback=callbacks,
             tb_log_name=run_name,
+            reset_num_timesteps=not continue_same_stage,
         )
 
         if not args.smoke:
