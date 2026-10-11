@@ -11,7 +11,7 @@ class NominalPController(ResidualVelocityMixer):
         kp=0.5,
         nominal_speed_limit=0.4,
         residual_speed_limit=0.6,
-        command_speed_limit=1.0,
+        command_speed_limit=1.4,
     ):
         if kp <= 0:
             raise ValueError("kp must be positive.")

@@ -135,7 +135,7 @@ class FormationPyBulletEnv(gym.Env):
         self.wheel_indices = [3,1,5,7] # 小车轮子关节索引
         self.steer_indices = [2,0,4,6] # 小车转向关节索引
 
-        self.max_vel = 1.0  # 最终二维速度命令上限 1.0 m/s
+        self.max_vel = 1.3  # 最终二维速度命令上限 1.3 m/s
         self.max_omega = 1.0  # 最大角速度 1.0 rad/s
         leader_nominal_positions = np.asarray(
             self.g_nom[:self.n_leaders, :2],
