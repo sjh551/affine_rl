@@ -1,0 +1,1143 @@
+{
+  "claim_scope": "Strict componentwise betweenness in the fixed theta frame, with one nondegenerate control triplet per follower, certifies the follower velocity iteration rho(T_ff)<1. It does not certify the complete sampled-data/PyBullet closed loop.",
+  "topology_family": "two-leader path 0-2-3-...-(n-1)-1",
+  "agent_counts": [
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "samples_per_agent_count": 10000,
+  "cases": [
+    {
+      "name": "original_square_not_between",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -1.0,
+          3.0,
+          -1.5707963267948966
+        ],
+        [
+          -3.0,
+          -1.0,
+          3.141592653589793
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 2.0,
+      "full_spectral_radius": 1.1547005383792515,
+      "full_spectral_norm": 2.0,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": false,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": false,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 1.1547005383792515,
+          "spectral_norm": 2.0,
+          "maximum_row_sum": 2.0,
+          "minimum_row_sum": 0.6666666666666666,
+          "deficient_rows": [
+            0
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": false,
+          "nonnegative_iteration_matrix": false,
+          "substochastic_iteration_matrix": false,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.5773502691896258,
+          "spectral_norm": 1.0,
+          "maximum_row_sum": 0.3333333333333333,
+          "minimum_row_sum": -1.0,
+          "deficient_rows": [
+            0,
+            1
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": false,
+      "inclusive_betweenness": false,
+      "velocity_iteration_stable": false
+    },
+    {
+      "name": "strict_between_4_agents",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.3333333333333335,
+          -0.33333333333333326,
+          -1.5707963267948966
+        ],
+        [
+          1.6666666666666667,
+          -1.6666666666666665,
+          3.141592653589793
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 1.3333333333333333,
+      "full_spectral_radius": 0.5000000000000001,
+      "full_spectral_norm": 0.5,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.5,
+          "spectral_norm": 0.5,
+          "maximum_row_sum": 0.5,
+          "minimum_row_sum": 0.4999999999999999,
+          "deficient_rows": [
+            0,
+            1
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.5000000000000001,
+          "spectral_norm": 0.5,
+          "maximum_row_sum": 0.5,
+          "minimum_row_sum": 0.5,
+          "deficient_rows": [
+            0,
+            1
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": true,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": true
+    },
+    {
+      "name": "strict_between_5_agents",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.5,
+          0.0,
+          -1.5707963267948966
+        ],
+        [
+          2.0,
+          -1.0,
+          3.141592653589793
+        ],
+        [
+          1.5,
+          -2.0,
+          0.0
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          1,
+          3,
+          4
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 1.0,
+      "full_spectral_radius": 0.7071067811865476,
+      "full_spectral_norm": 0.7071067811865476,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.7071067811865476,
+          "spectral_norm": 0.7071067811865476,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.5,
+          "deficient_rows": [
+            0,
+            2
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.7071067811865476,
+          "spectral_norm": 0.7071067811865476,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.5,
+          "deficient_rows": [
+            0,
+            2
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": true,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": true
+    },
+    {
+      "name": "strict_between_6_agents",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.6,
+          0.19999999999999996,
+          -1.5707963267948966
+        ],
+        [
+          2.2,
+          -0.6000000000000001,
+          3.141592653589793
+        ],
+        [
+          1.8,
+          -1.4,
+          0.0
+        ],
+        [
+          1.4,
+          -2.2,
+          0.0
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          3,
+          5,
+          4
+        ],
+        [
+          1,
+          4,
+          5
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 0.7999999999999998,
+      "full_spectral_radius": 0.8090169943749479,
+      "full_spectral_norm": 0.8090169943749476,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.8090169943749469,
+          "spectral_norm": 0.8090169943749475,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.4999999999999999,
+          "deficient_rows": [
+            0,
+            3
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.8090169943749479,
+          "spectral_norm": 0.8090169943749476,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.4999999999999999,
+          "deficient_rows": [
+            0,
+            3
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": true,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": true
+    },
+    {
+      "name": "strict_between_7_agents",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.6666666666666665,
+          0.33333333333333337,
+          -1.5707963267948966
+        ],
+        [
+          2.3333333333333335,
+          -0.33333333333333326,
+          3.141592653589793
+        ],
+        [
+          2.0,
+          -1.0,
+          0.0
+        ],
+        [
+          1.6666666666666667,
+          -1.6666666666666665,
+          0.0
+        ],
+        [
+          1.3333333333333333,
+          -2.3333333333333335,
+          0.0
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          3,
+          5,
+          4
+        ],
+        [
+          4,
+          6,
+          5
+        ],
+        [
+          1,
+          5,
+          6
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 0.6666666666666665,
+      "full_spectral_radius": 0.866025403784439,
+      "full_spectral_norm": 0.8660254037844386,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.866025403784439,
+          "spectral_norm": 0.8660254037844386,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.49999999999999983,
+          "deficient_rows": [
+            0,
+            4
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.8660254037844393,
+          "spectral_norm": 0.8660254037844385,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.49999999999999983,
+          "deficient_rows": [
+            0,
+            4
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": true,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": true
+    },
+    {
+      "name": "strict_between_8_agents",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.7142857142857144,
+          0.4285714285714286,
+          -1.5707963267948966
+        ],
+        [
+          2.428571428571429,
+          -0.1428571428571428,
+          3.141592653589793
+        ],
+        [
+          2.142857142857143,
+          -0.7142857142857142,
+          0.0
+        ],
+        [
+          1.8571428571428572,
+          -1.2857142857142856,
+          0.0
+        ],
+        [
+          1.5714285714285714,
+          -1.8571428571428572,
+          0.0
+        ],
+        [
+          1.2857142857142858,
+          -2.4285714285714284,
+          0.0
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          3,
+          5,
+          4
+        ],
+        [
+          4,
+          6,
+          5
+        ],
+        [
+          5,
+          7,
+          6
+        ],
+        [
+          1,
+          6,
+          7
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 0.5714285714285712,
+      "full_spectral_radius": 0.9009688679024198,
+      "full_spectral_norm": 0.9009688679024194,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.9009688679024198,
+          "spectral_norm": 0.9009688679024191,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.5,
+          "deficient_rows": [
+            0,
+            5
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.9009688679024191,
+          "spectral_norm": 0.900968867902419,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 0.5,
+          "deficient_rows": [
+            0,
+            5
+          ],
+          "follower_reaches_leader": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": true,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": true
+    },
+    {
+      "name": "inclusive_endpoint_counterexample_4_agents",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.0,
+          -1.0,
+          -1.5707963267948966
+        ],
+        [
+          2.0,
+          -1.0,
+          3.141592653589793
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 1.0,
+      "full_spectral_radius": 1.0,
+      "full_spectral_norm": 1.0,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": false,
+          "spectral_radius": 1.0,
+          "spectral_norm": 1.0,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 1.0,
+          "deficient_rows": [],
+          "follower_reaches_leader": [
+            false,
+            false
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": false,
+          "spectral_radius": 1.0,
+          "spectral_norm": 1.0,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 1.0,
+          "deficient_rows": [],
+          "follower_reaches_leader": [
+            false,
+            false
+          ]
+        }
+      ],
+      "strict_betweenness": false,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": false
+    }
+  ],
+  "monte_carlo_by_agent_count": [
+    {
+      "n_agents": 4,
+      "n_followers": 2,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "samples": 10000,
+      "seed": 4,
+      "fraction_margin": 0.02,
+      "strict_betweenness_samples": 10000,
+      "rho_less_than_one_samples": 10000,
+      "implication_violations": 0,
+      "spectral_radius_min": 0.06791113163187774,
+      "spectral_radius_mean": 0.6163481279180953,
+      "spectral_radius_max": 0.9600294817816608,
+      "spectral_norm_max": 0.979552050996245,
+      "worst_configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          1.9720275188345167,
+          -1.8191893657274623,
+          -1.5707963267948966
+        ],
+        [
+          1.9313371467697489,
+          -2.6417315370879924,
+          3.141592653589793
+        ]
+      ]
+    },
+    {
+      "n_agents": 5,
+      "n_followers": 3,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          1,
+          3,
+          4
+        ]
+      ],
+      "samples": 10000,
+      "seed": 5,
+      "fraction_margin": 0.02,
+      "strict_betweenness_samples": 10000,
+      "rho_less_than_one_samples": 10000,
+      "implication_violations": 0,
+      "spectral_radius_min": 0.36619052842701494,
+      "spectral_radius_mean": 0.8213561572162255,
+      "spectral_radius_max": 0.9781582360405554,
+      "spectral_norm_max": 1.3533151382276574,
+      "worst_configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          1.8533460642963493,
+          0.4895341562564456,
+          -1.5707963267948966
+        ],
+        [
+          1.8110317219943584,
+          -0.11467345099137871,
+          3.141592653589793
+        ],
+        [
+          1.7699991422053993,
+          -2.7606487922584053,
+          0.0
+        ]
+      ]
+    },
+    {
+      "n_agents": 6,
+      "n_followers": 4,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          3,
+          5,
+          4
+        ],
+        [
+          1,
+          4,
+          5
+        ]
+      ],
+      "samples": 10000,
+      "seed": 6,
+      "fraction_margin": 0.02,
+      "strict_betweenness_samples": 10000,
+      "rho_less_than_one_samples": 10000,
+      "implication_violations": 0,
+      "spectral_radius_min": 0.5810716080279945,
+      "spectral_radius_mean": 0.8953007240544659,
+      "spectral_radius_max": 0.9803425805573404,
+      "spectral_norm_max": 1.3454647966487991,
+      "worst_configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.744130208325083,
+          -1.0032216698996015,
+          -1.5707963267948966
+        ],
+        [
+          2.612961573136015,
+          -1.0920971541998261,
+          3.141592653589793
+        ],
+        [
+          2.4623308210229995,
+          -1.1866529541749222,
+          0.0
+        ],
+        [
+          1.4913103055236072,
+          -1.4014858037574554,
+          0.0
+        ]
+      ]
+    },
+    {
+      "n_agents": 7,
+      "n_followers": 5,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          3,
+          5,
+          4
+        ],
+        [
+          4,
+          6,
+          5
+        ],
+        [
+          1,
+          5,
+          6
+        ]
+      ],
+      "samples": 10000,
+      "seed": 7,
+      "fraction_margin": 0.02,
+      "strict_betweenness_samples": 10000,
+      "rho_less_than_one_samples": 10000,
+      "implication_violations": 0,
+      "spectral_radius_min": 0.743070316444209,
+      "spectral_radius_mean": 0.9307476315904089,
+      "spectral_radius_max": 0.9844543256655689,
+      "spectral_norm_max": 1.336137134064104,
+      "worst_configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.1640042435334395,
+          0.20833004531746102,
+          -1.5707963267948966
+        ],
+        [
+          2.1214939496214624,
+          -0.19236516554319705,
+          3.141592653589793
+        ],
+        [
+          2.0451031153145696,
+          -0.5505438806224023,
+          0.0
+        ],
+        [
+          1.95583643000769,
+          -2.2236268510206676,
+          0.0
+        ],
+        [
+          1.912346868623976,
+          -2.519379088087982,
+          0.0
+        ]
+      ]
+    },
+    {
+      "n_agents": 8,
+      "n_followers": 6,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          2,
+          4,
+          3
+        ],
+        [
+          3,
+          5,
+          4
+        ],
+        [
+          4,
+          6,
+          5
+        ],
+        [
+          5,
+          7,
+          6
+        ],
+        [
+          1,
+          6,
+          7
+        ]
+      ],
+      "samples": 10000,
+      "seed": 8,
+      "fraction_margin": 0.02,
+      "strict_betweenness_samples": 10000,
+      "rho_less_than_one_samples": 10000,
+      "implication_violations": 0,
+      "spectral_radius_min": 0.8252078587158294,
+      "spectral_radius_mean": 0.9485637886862687,
+      "spectral_radius_max": 0.9857172671783826,
+      "spectral_norm_max": 1.3262581980636772,
+      "worst_configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.397495415238156,
+          -0.7310575028601247,
+          -1.5707963267948966
+        ],
+        [
+          2.1943937251910013,
+          -0.8352146805741254,
+          3.141592653589793
+        ],
+        [
+          2.128552109922588,
+          -0.9455947347572804,
+          0.0
+        ],
+        [
+          1.6385721032070828,
+          -1.1058325616931262,
+          0.0
+        ],
+        [
+          1.443870488561747,
+          -1.18592437797709,
+          0.0
+        ],
+        [
+          1.3426411905116995,
+          -2.1715091082625744,
+          0.0
+        ]
+      ]
+    }
+  ],
+  "homogeneous_velocity_iteration": {
+    "iterations": 50,
+    "initial_norm": 0.674095682511709,
+    "final_norm": 5.987172380199246e-16,
+    "norm_ratio": 8.881784197001216e-16,
+    "norms": [
+      0.674095682511709,
+      0.33704784125585446,
+      0.16852392062792723,
+      0.0842619603139636,
+      0.0421309801569818,
+      0.021065490078490897,
+      0.010532745039245449,
+      0.005266372519622723,
+      0.0026331862598113617,
+      0.0013165931299056806,
+      0.0006582965649528403,
+      0.0003291482824764201,
+      0.00016457414123821005,
+      8.228707061910501e-05,
+      4.1143535309552506e-05,
+      2.057176765477625e-05,
+      1.0285883827388125e-05,
+      5.1429419136940616e-06,
+      2.5714709568470308e-06,
+      1.2857354784235152e-06,
+      6.428677392117576e-07,
+      3.2143386960587874e-07,
+      1.6071693480293937e-07,
+      8.035846740146967e-08,
+      4.0179233700734836e-08,
+      2.0089616850367415e-08,
+      1.0044808425183707e-08,
+      5.022404212591853e-09,
+      2.5112021062959264e-09,
+      1.255601053147963e-09,
+      6.278005265739815e-10,
+      3.139002632869907e-10,
+      1.5695013164349535e-10,
+      7.847506582174766e-11,
+      3.923753291087383e-11,
+      1.9618766455436912e-11,
+      9.809383227718456e-12,
+      4.904691613859227e-12,
+      2.4523458069296136e-12,
+      1.2261729034648066e-12,
+      6.130864517324033e-13,
+      3.065432258662016e-13,
+      1.532716129331008e-13,
+      7.663580646655039e-14,
+      3.8317903233275194e-14,
+      1.9158951616637594e-14,
+      9.579475808318797e-15,
+      4.7897379041593985e-15,
+      2.394868952079699e-15,
+      1.1974344760398492e-15,
+      5.987172380199246e-16
+    ],
+    "n_agents": 4
+  },
+  "checks": {
+    "all_strict_examples_are_strict": true,
+    "all_strict_examples_use_one_triplet_per_follower": true,
+    "all_strict_examples_reach_leaders": true,
+    "all_strict_examples_have_rho_less_than_one": true,
+    "endpoint_example_is_inclusive": true,
+    "endpoint_example_is_not_strict": true,
+    "endpoint_example_rho_equals_one": true,
+    "all_monte_carlo_samples_are_strict": true,
+    "monte_carlo_found_no_counterexample": true
+  },
+  "all_checks_passed": true
+}

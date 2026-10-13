@@ -1,0 +1,792 @@
+{
+  "configuration": [
+    [
+      3.0,
+      1.0,
+      0.0
+    ],
+    [
+      1.0,
+      -3.0,
+      1.5707963267948966
+    ],
+    [
+      -10.9999995921293,
+      6.652843204600886,
+      -1.5707963267948966
+    ],
+    [
+      -11.799999592734094,
+      -1.4867325678289347,
+      3.141592653589793
+    ]
+  ],
+  "initial_spectral_radius": 1.1547005383792515,
+  "optimized_spectral_radius": 1.0044944049470552,
+  "objective_value": 191.0201567446906,
+  "min_degree_singular_value": 2.486732567828934,
+  "min_signed_coordinate_separation": 0.8000000006047951,
+  "minimum_pairwise_distance": 4.47213595499958,
+  "success": false,
+  "message": "The solution does not satisfy the constraints, MAXCV = 0.054494404947055264",
+  "iterations": 300,
+  "function_evaluations": 5000,
+  "seed": 0,
+  "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\optimized_configuration.npy",
+  "best_seed": 0,
+  "selection_reason": "minimum normalized violation; no feasible run found",
+  "number_of_runs": 20,
+  "number_of_feasible_runs": 0,
+  "requested_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "rho_limit": 0.95,
+  "theta": 0.0,
+  "search_radius": 10.0,
+  "coordinate_margin": 0.8,
+  "minimum_pairwise_distance_limit": 1.0,
+  "min_degree_singular_value_limit": 0.001,
+  "x_bounds": null,
+  "y_bounds": null,
+  "runs": [
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.9999995921293,
+          6.652843204600886,
+          -1.5707963267948966
+        ],
+        [
+          -11.799999592734094,
+          -1.4867325678289347,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944049470552,
+      "objective_value": 191.0201567446906,
+      "min_degree_singular_value": 2.486732567828934,
+      "min_signed_coordinate_separation": 0.8000000006047951,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494404947055264",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_0_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999996796000563,
+          9.146390835007768,
+          -1.5707963267948966
+        ],
+        [
+          -11.799998947350971,
+          -1.5617764740628317,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944182433804,
+      "objective_value": 215.53363049687766,
+      "min_degree_singular_value": 2.5617764740628317,
+      "min_signed_coordinate_separation": 0.8000021513504088,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494418243380416",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 1,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_1_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999985620063034,
+          1.878295480414612,
+          -1.5707963267948966
+        ],
+        [
+          -11.799988899235217,
+          -1.1756229575636759,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944317863054,
+      "objective_value": 178.7285814806122,
+      "min_degree_singular_value": 2.175622957563676,
+      "min_signed_coordinate_separation": 0.8000032791721825,
+      "minimum_pairwise_distance": 3.1569642178064026,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449443178630542",
+      "iterations": 300,
+      "function_evaluations": 4995,
+      "seed": 2,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_2_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999893752998839,
+          5.33712200575896,
+          -1.5707963267948966
+        ],
+        [
+          -11.799939832972553,
+          -0.6915894849294926,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044947209046016,
+      "objective_value": 182.99407245081105,
+      "min_degree_singular_value": 1.6915894849294926,
+      "min_signed_coordinate_separation": 0.8000460799737148,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449472090460161",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 3,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_3_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999999978553841,
+          2.197404909268757,
+          -1.5707963267948966
+        ],
+        [
+          -11.800000619076089,
+          -1.1059081705590348,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.004494408078689,
+      "objective_value": 178.09538588707343,
+      "min_degree_singular_value": 2.105908170559035,
+      "min_signed_coordinate_separation": 0.8000006405222475,
+      "minimum_pairwise_distance": 3.3988054266458647,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494408078689105",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 4,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_4_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999999475136564,
+          12.824092570636221,
+          -1.5707963267948966
+        ],
+        [
+          -11.79999951083476,
+          -0.9828944741116588,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944052123042,
+      "objective_value": 273.9530683288692,
+      "min_degree_singular_value": 1.9828944741116583,
+      "min_signed_coordinate_separation": 0.8000000356981971,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.0544944052123042",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 5,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_5_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999998428802146,
+          3.3798451666652136,
+          -1.5707963267948966
+        ],
+        [
+          -11.799998678332706,
+          -1.280598850243119,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944070541846,
+      "objective_value": 177.66296338009943,
+      "min_degree_singular_value": 2.280598850243119,
+      "min_signed_coordinate_separation": 0.8000002495305605,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494407054184624",
+      "iterations": 300,
+      "function_evaluations": 4995,
+      "seed": 6,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_6_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.99996913768199,
+          3.781829287155422,
+          -1.5707963267948966
+        ],
+        [
+          -11.799969925133297,
+          -1.0074908139356133,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.004494429727649,
+      "objective_value": 178.05016658439018,
+      "min_degree_singular_value": 2.007490813935614,
+      "min_signed_coordinate_separation": 0.8000007874513066,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449442972764906",
+      "iterations": 300,
+      "function_evaluations": 4995,
+      "seed": 7,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_7_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999999566719492,
+          5.516135106466795,
+          -1.5707963267948966
+        ],
+        [
+          -11.800000358219918,
+          -0.8551518810268801,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944091579273,
+      "objective_value": 183.7919144906254,
+      "min_degree_singular_value": 1.8551518810268801,
+      "min_signed_coordinate_separation": 0.8000007915004268,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440915792736",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 8,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_8_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.99994030651285,
+          12.303767763927915,
+          -1.5707963267948966
+        ],
+        [
+          -11.799968302604377,
+          -0.9259932559784336,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.004494593510877,
+      "objective_value": 264.00381986392694,
+      "min_degree_singular_value": 1.9259932559784332,
+      "min_signed_coordinate_separation": 0.8000279960915275,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494593510877154",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 9,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_9_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999985909833661,
+          6.156807690363759,
+          -1.5707963267948966
+        ],
+        [
+          -11.799987833612095,
+          -2.1805751462684153,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944244033112,
+      "objective_value": 188.7986965385191,
+      "min_degree_singular_value": 3.1805751462684144,
+      "min_signed_coordinate_separation": 0.8000019237784333,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494424403311204",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 10,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_10_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.99982113190024,
+          5.6031271188539495,
+          -1.5707963267948966
+        ],
+        [
+          -11.79982728903331,
+          -0.5440329763504161,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044945583576663,
+      "objective_value": 184.41755971038268,
+      "min_degree_singular_value": 1.5440329763504161,
+      "min_signed_coordinate_separation": 0.800006157133069,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449455835766637",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 11,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_11_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999266504763668,
+          5.112510492153312,
+          -1.5707963267948966
+        ],
+        [
+          -11.799312629538793,
+          -1.9707485100091162,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044951456591358,
+      "objective_value": 182.81828663479226,
+      "min_degree_singular_value": 2.970748510009116,
+      "min_signed_coordinate_separation": 0.8000461247751254,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054495145659135824",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 12,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_12_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999981235463832,
+          2.159915278234351,
+          -1.5707963267948966
+        ],
+        [
+          -11.799982983095608,
+          -1.1740942086022224,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.004494426632431,
+      "objective_value": 178.1753763456139,
+      "min_degree_singular_value": 2.1740942086022224,
+      "min_signed_coordinate_separation": 0.8000017476317769,
+      "minimum_pairwise_distance": 3.4286472630660283,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449442663243098",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 13,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_13_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999998538264226,
+          2.723832067832814,
+          -1.5707963267948966
+        ],
+        [
+          -11.799999748220964,
+          -1.987089926660465,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944120727162,
+      "objective_value": 178.49058158404773,
+      "min_degree_singular_value": 2.987089926660465,
+      "min_signed_coordinate_separation": 0.8000012099567382,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494412072716214",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 14,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_14_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999151519175182,
+          8.336983641331425,
+          -1.5707963267948966
+        ],
+        [
+          -11.79924067016891,
+          -0.8909753475213091,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044954516572249,
+      "objective_value": 205.9049482376653,
+      "min_degree_singular_value": 1.8909753475213087,
+      "min_signed_coordinate_separation": 0.8000891509937276,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054495451657224914",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 15,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_15_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999999378565288,
+          2.4498840863842073,
+          -1.5707963267948966
+        ],
+        [
+          -11.799999462537668,
+          -1.9534711818866914,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.004494405533624,
+      "objective_value": 178.65171292507114,
+      "min_degree_singular_value": 2.953471181886691,
+      "min_signed_coordinate_separation": 0.80000008397238,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440553362406",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 16,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_16_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999889001427656,
+          4.796483762639214,
+          -1.5707963267948966
+        ],
+        [
+          -11.799931269546505,
+          -1.8352127736533088,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044947039078649,
+      "objective_value": 181.36150467631614,
+      "min_degree_singular_value": 2.835212773653309,
+      "min_signed_coordinate_separation": 0.8000422681188493,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449470390786493",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 17,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_17_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999724744530562,
+          4.554296516908957,
+          -1.5707963267948966
+        ],
+        [
+          -11.799744531386812,
+          -0.4902482024423662,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044946958596694,
+      "objective_value": 180.10568334163747,
+      "min_degree_singular_value": 1.4902482024423662,
+      "min_signed_coordinate_separation": 0.8000197868562502,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494695859669484",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 18,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_18_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -10.999991074027356,
+          7.485267410743878,
+          -1.5707963267948966
+        ],
+        [
+          -11.799994441757079,
+          -1.1778850245485997,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 1.0044944285651969,
+      "objective_value": 197.588990483422,
+      "min_degree_singular_value": 2.1778850245485994,
+      "min_signed_coordinate_separation": 0.8000033677297225,
+      "minimum_pairwise_distance": 4.47213595499958,
+      "success": false,
+      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449442856519693",
+      "iterations": 300,
+      "function_evaluations": 5000,
+      "seed": 19,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_19_configuration.npy"
+    }
+  ]
+}

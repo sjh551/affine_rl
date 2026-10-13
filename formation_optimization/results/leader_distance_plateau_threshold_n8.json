@@ -1,0 +1,132 @@
+{
+  "experiment": "path spectral-radius minimization under strict betweenness",
+  "topology_family": "two-leader path 0-2-3-...-(n-1)-1",
+  "agent_counts": [
+    8
+  ],
+  "gap_margins": [
+    0.02
+  ],
+  "minimum_distances": [
+    0.0894427190999916
+  ],
+  "starts_per_case": 50,
+  "theta": 0.0,
+  "runs": [
+    {
+      "n_agents": 8,
+      "n_followers": 6,
+      "gap_margin": 0.02,
+      "minimum_distance": 0.0894427190999916,
+      "leader_distance": 4.47213595499958,
+      "monotone_path_length_upper_bound": 6.0,
+      "distance_necessary_upper_bound": 0.8571428571428571,
+      "maximum_distance_found": 0.7798830207823054,
+      "starts": 50,
+      "seed": 309,
+      "equal_spacing": {
+        "gaps": [
+          [
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285
+          ],
+          [
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285
+          ]
+        ],
+        "spectral_radius": 0.90096886790242,
+        "spectral_norm": 0.9009688679024193,
+        "analytic_spectral_radius": 0.9009688679024191,
+        "formula_error": 8.881784197001252e-16
+      },
+      "optimized": {
+        "gaps": [
+          0.02000000000000031,
+          0.04891448692713656,
+          0.2209632082861093,
+          0.42023843387469023,
+          0.22097834891926618,
+          0.0489055219927969,
+          0.020000000000000455,
+          0.02,
+          0.048920179848778375,
+          0.22103294029012993,
+          0.42013336659709893,
+          0.22100148553500898,
+          0.04891202772898309,
+          0.020000000000000857
+        ],
+        "spectral_radius": 0.6893146262125681,
+        "spectral_norm": 0.8563856205984459,
+        "improvement_from_equal": 0.21165424168985192,
+        "minimum_pairwise_distance": 0.08944271909999177,
+        "strict_betweenness": true,
+        "every_follower_reaches_leader": true,
+        "configuration": [
+          [
+            3.0,
+            1.0,
+            0.0
+          ],
+          [
+            1.0,
+            -3.0,
+            1.5707963267948966
+          ],
+          [
+            2.9599999999999995,
+            0.92,
+            -1.5707963267948966
+          ],
+          [
+            2.8621710261457265,
+            0.7243192806048865,
+            3.141592653589793
+          ],
+          [
+            2.4202446095735075,
+            -0.15981248055563313,
+            0.0
+          ],
+          [
+            1.5797677418241274,
+            -1.840345946944029,
+            0.0
+          ],
+          [
+            1.137811043985595,
+            -2.724351889084065,
+            0.0
+          ],
+          [
+            1.0400000000000014,
+            -2.9199999999999973,
+            0.0
+          ]
+        ]
+      },
+      "solver": {
+        "best_start": 32,
+        "feasible_results": 50,
+        "success": true,
+        "message": "Optimization terminated successfully",
+        "iterations": 53,
+        "function_evaluations": 856
+      }
+    }
+  ],
+  "infeasible_runs": [],
+  "all_strict": true,
+  "all_rho_less_than_one": true
+}

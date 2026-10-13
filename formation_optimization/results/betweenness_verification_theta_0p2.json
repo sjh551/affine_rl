@@ -1,0 +1,358 @@
+{
+  "claim_scope": "Strict componentwise betweenness in the fixed theta frame, with one nondegenerate control triplet per follower, certifies the follower velocity iteration rho(T_ff)<1. It does not certify the complete sampled-data/PyBullet closed loop.",
+  "cases": [
+    {
+      "name": "original_square_not_between",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -1.0,
+          3.0,
+          -1.5707963267948966
+        ],
+        [
+          -3.0,
+          -1.0,
+          3.141592653589793
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 0.7681171709121153,
+      "full_spectral_radius": 1.6043103659334663,
+      "full_spectral_norm": 4.586445640307032,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": false,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": false,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 1.6043103659334665,
+          "spectral_norm": 4.586445640307032,
+          "maximum_row_sum": 4.586445640307032,
+          "minimum_row_sum": 0.5611778601761154,
+          "deficient_rows": [
+            0
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": false,
+          "nonnegative_iteration_matrix": false,
+          "substochastic_iteration_matrix": false,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 1.2545165404416052,
+          "spectral_norm": 3.5864456403070326,
+          "maximum_row_sum": 0.4388221398238845,
+          "minimum_row_sum": -3.5864456403070326,
+          "deficient_rows": [
+            0,
+            1
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": false,
+      "inclusive_betweenness": false,
+      "velocity_iteration_stable": false
+    },
+    {
+      "name": "strict_between_example",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.3333333333333335,
+          -0.3333333333333331,
+          -1.5707963267948966
+        ],
+        [
+          1.6666666666666665,
+          -1.6666666666666663,
+          3.141592653589793
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 1.8365403192418186,
+      "full_spectral_radius": 0.5000000000000002,
+      "full_spectral_norm": 0.5000000000000001,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.5,
+          "spectral_norm": 0.5,
+          "maximum_row_sum": 0.5,
+          "minimum_row_sum": 0.4999999999999999,
+          "deficient_rows": [
+            0,
+            1
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": true,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": true,
+          "spectral_radius": 0.5000000000000001,
+          "spectral_norm": 0.5000000000000001,
+          "maximum_row_sum": 0.5000000000000001,
+          "minimum_row_sum": 0.5,
+          "deficient_rows": [
+            0,
+            1
+          ],
+          "follower_reaches_leader": [
+            true,
+            true
+          ]
+        }
+      ],
+      "strict_betweenness": true,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": true
+    },
+    {
+      "name": "inclusive_endpoint_counterexample",
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          2.0,
+          -1.0,
+          -1.5707963267948966
+        ],
+        [
+          2.0,
+          -1.0,
+          3.141592653589793
+        ]
+      ],
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "one_triplet_per_follower": true,
+      "degree_min_singular_value": 1.3774052394313643,
+      "full_spectral_radius": 1.0,
+      "full_spectral_norm": 1.0,
+      "directions": [
+        {
+          "coordinate": "x_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": false,
+          "spectral_radius": 1.0,
+          "spectral_norm": 1.0,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 1.0,
+          "deficient_rows": [],
+          "follower_reaches_leader": [
+            false,
+            false
+          ]
+        },
+        {
+          "coordinate": "y_theta",
+          "strict_betweenness": false,
+          "inclusive_betweenness": true,
+          "nonnegative_iteration_matrix": true,
+          "substochastic_iteration_matrix": true,
+          "every_follower_reaches_leader": false,
+          "spectral_radius": 1.0,
+          "spectral_norm": 1.0,
+          "maximum_row_sum": 1.0,
+          "minimum_row_sum": 1.0,
+          "deficient_rows": [],
+          "follower_reaches_leader": [
+            false,
+            false
+          ]
+        }
+      ],
+      "strict_betweenness": false,
+      "inclusive_betweenness": true,
+      "velocity_iteration_stable": false
+    }
+  ],
+  "monte_carlo": {
+    "samples": 1000,
+    "seed": 1,
+    "fraction_margin": 0.02,
+    "strict_betweenness_samples": 1000,
+    "rho_less_than_one_samples": 1000,
+    "implication_violations": 0,
+    "spectral_radius_min": 0.1048291737256316,
+    "spectral_radius_mean": 0.6153889948055812,
+    "spectral_radius_max": 0.9582545124074721,
+    "spectral_norm_max": 0.9787435158050455,
+    "worst_configuration": [
+      [
+        3.0,
+        1.0,
+        0.0
+      ],
+      [
+        1.0,
+        -3.0,
+        1.5707963267948966
+      ],
+      [
+        1.8642135786661282,
+        -0.11642360739335644,
+        -1.5707963267948966
+      ],
+      [
+        2.016920591728779,
+        -1.1653220759187028,
+        3.141592653589793
+      ]
+    ]
+  },
+  "homogeneous_velocity_iteration": {
+    "iterations": 50,
+    "initial_norm": 1.6130382013872855,
+    "final_norm": 1.4326657206240977e-15,
+    "norm_ratio": 8.88178419700129e-16,
+    "norms": [
+      1.6130382013872855,
+      0.8065191006936427,
+      0.40325955034682137,
+      0.20162977517341074,
+      0.10081488758670537,
+      0.050407443793352685,
+      0.025203721896676346,
+      0.012601860948338175,
+      0.006300930474169087,
+      0.003150465237084544,
+      0.0015752326185422723,
+      0.0007876163092711361,
+      0.0003938081546355681,
+      0.00019690407731778406,
+      9.845203865889204e-05,
+      4.922601932944602e-05,
+      2.4613009664723018e-05,
+      1.2306504832361509e-05,
+      6.153252416180755e-06,
+      3.076626208090378e-06,
+      1.538313104045189e-06,
+      7.691565520225946e-07,
+      3.845782760112973e-07,
+      1.9228913800564866e-07,
+      9.614456900282436e-08,
+      4.807228450141218e-08,
+      2.4036142250706092e-08,
+      1.2018071125353046e-08,
+      6.009035562676524e-09,
+      3.0045177813382623e-09,
+      1.5022588906691312e-09,
+      7.511294453345657e-10,
+      3.755647226672829e-10,
+      1.8778236133364145e-10,
+      9.389118066682074e-11,
+      4.694559033341037e-11,
+      2.3472795166705187e-11,
+      1.1736397583352595e-11,
+      5.868198791676298e-12,
+      2.9340993958381492e-12,
+      1.4670496979190748e-12,
+      7.335248489595374e-13,
+      3.6676242447976876e-13,
+      1.8338121223988438e-13,
+      9.16906061199422e-14,
+      4.584530305997111e-14,
+      2.2922651529985557e-14,
+      1.1461325764992778e-14,
+      5.730662882496389e-15,
+      2.865331441248195e-15,
+      1.4326657206240977e-15
+    ]
+  },
+  "checks": {
+    "strict_example_is_strict": true,
+    "strict_example_rho_less_than_one": true,
+    "endpoint_example_is_inclusive": true,
+    "endpoint_example_is_not_strict": true,
+    "endpoint_example_rho_equals_one": true,
+    "monte_carlo_found_no_counterexample": true
+  },
+  "all_checks_passed": true
+}

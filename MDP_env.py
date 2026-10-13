@@ -5,6 +5,7 @@ import pybullet as p
 import pybullet_data
 import time
 import math
+from scipy.optimize import minimize
 from controllers import NominalPController
 from utils.formation_graph import FormationGraph
 from utils.formation_utils import get_square_configuration, get_square_topology, get_nominal_configuration, get_topology
@@ -18,13 +19,146 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 MAX_GRAPH_AGENTS = 9
 RANGER_URDF_PATH = os.path.join(PROJECT_ROOT, "assets", "ranger_mini_v3", "urdf", "ranger_mini.urdf").replace("\\", "/")
 
+
+def formation_cbf_filter(
+    pL,
+    u_rl,
+    H,
+    obstacles,
+    d_safe,
+    gamma,
+    return_diagnostics=False,
+):
+    """Project a two-leader velocity command onto formation CBF constraints.
+
+    The QP is
+
+        min 0.5 * ||u - u_rl||^2
+        s.t. A_cbf @ u >= b_cbf,
+
+    where every ideal formation agent contributes the constraint associated
+    with its nearest obstacle center.  ``pL`` and ``u_rl`` are ordered as
+    ``[p1x, p1y, p2x, p2y]`` and ``[u1x, u1y, u2x, u2y]``.
+    """
+    pL = np.asarray(pL, dtype=float).reshape(-1)
+    u_rl = np.asarray(u_rl, dtype=float).reshape(-1)
+    H = np.asarray(H, dtype=float)
+    obstacles = np.asarray(obstacles, dtype=float)
+
+    if pL.shape != (4,) or u_rl.shape != (4,):
+        raise ValueError("pL and u_rl must both have shape (4,).")
+    if (
+        H.ndim != 2
+        or H.shape[1] != 4
+        or H.shape[0] < 2
+        or H.shape[0] % 2 != 0
+    ):
+        raise ValueError("H must have shape (2*n_agents, 4).")
+    if not np.all(np.isfinite(pL)) or not np.all(np.isfinite(u_rl)):
+        raise ValueError("pL and u_rl must contain only finite values.")
+    if not np.all(np.isfinite(H)):
+        raise ValueError("H must contain only finite values.")
+    if not np.isfinite(d_safe) or d_safe <= 0.0:
+        raise ValueError("d_safe must be a positive finite scalar.")
+    if not np.isfinite(gamma) or gamma <= 0.0:
+        raise ValueError("gamma must be a positive finite scalar.")
+
+    if obstacles.size == 0:
+        obstacles = np.empty((0, 2), dtype=float)
+    elif obstacles.ndim != 2 or obstacles.shape[1] != 2:
+        raise ValueError("obstacles must have shape (n_obstacles, 2).")
+    elif not np.all(np.isfinite(obstacles)):
+        raise ValueError("obstacles must contain only finite values.")
+
+    if len(obstacles) == 0:
+        diagnostics = {
+            "status": "no_obstacles",
+            "solver_success": True,
+            "n_constraints": 0,
+            "min_barrier": np.nan,
+            "nominal_min_constraint_margin": np.nan,
+            "safe_min_constraint_margin": np.nan,
+            "correction_norm": 0.0,
+            "active_constraints": 0,
+        }
+        result = u_rl.copy()
+        return (result, diagnostics) if return_diagnostics else result
+
+    p_all = H @ pL
+    constraint_rows = []
+    constraint_bounds = []
+    barrier_values = []
+    for agent_index in range(H.shape[0] // 2):
+        row = slice(2 * agent_index, 2 * agent_index + 2)
+        p_i = p_all[row]
+        deltas = p_i - obstacles
+        nearest_index = int(np.argmin(np.einsum("ij,ij->i", deltas, deltas)))
+        delta = deltas[nearest_index]
+        h_i = float(delta @ delta - d_safe ** 2)
+        constraint_rows.append(2.0 * delta @ H[row, :])
+        constraint_bounds.append(-gamma * h_i)
+        barrier_values.append(h_i)
+
+    A_cbf = np.asarray(constraint_rows, dtype=float)
+    b_cbf = np.asarray(constraint_bounds, dtype=float)
+
+    def objective(command):
+        difference = command - u_rl
+        return 0.5 * float(difference @ difference)
+
+    def objective_jacobian(command):
+        return command - u_rl
+
+    qp_result = minimize(
+        objective,
+        u_rl.copy(),
+        jac=objective_jacobian,
+        method="SLSQP",
+        constraints={
+            # SLSQP uses c(u) >= 0.  For a solver using G u <= h,
+            # the equivalent representation is G=-A_cbf, h=-b_cbf.
+            "type": "ineq",
+            "fun": lambda command: A_cbf @ command - b_cbf,
+            "jac": lambda command: A_cbf,
+        },
+        options={"ftol": 1e-9, "maxiter": 100, "disp": False},
+    )
+    u_safe = np.asarray(qp_result.x, dtype=float)
+    safe_margins = A_cbf @ u_safe - b_cbf
+    nominal_margins = A_cbf @ u_rl - b_cbf
+    feasible = bool(
+        np.all(np.isfinite(u_safe))
+        and np.min(safe_margins) >= -1e-7
+    )
+    if not feasible:
+        raise RuntimeError(
+            "Formation CBF-QP failed to return a feasible command: "
+            f"{qp_result.message}; minimum margin={np.min(safe_margins):.3e}."
+        )
+
+    diagnostics = {
+        "status": "success" if qp_result.success else "feasible_solver_warning",
+        "solver_success": bool(qp_result.success),
+        "solver_message": str(qp_result.message),
+        "n_constraints": int(len(b_cbf)),
+        "min_barrier": float(np.min(barrier_values)),
+        "nominal_min_constraint_margin": float(np.min(nominal_margins)),
+        "safe_min_constraint_margin": float(np.min(safe_margins)),
+        "correction_norm": float(np.linalg.norm(u_safe - u_rl)),
+        "active_constraints": int(np.count_nonzero(safe_margins <= 1e-5)),
+    }
+    return (u_safe, diagnostics) if return_diagnostics else u_safe
+
 class FormationPyBulletEnv(gym.Env):
     def __init__(self, render_mode=False, enable_obstacles=True, enable_followers=True, hide_robots=False, k_accel_angular=0.2, k_vel_align=1.0, k_progress = 10.0,
                  k_shape_err = 0.01, k_disconnect = 0.2, k_smooth_linear = 0.05, k_omega_limit = 0.2, k_path_cost = 0.2,
                  nominal_kp=0.5, nominal_speed_limit=0.3, residual_speed_limit=1.0,
                  residual_effort_weight=0.02, residual_smooth_weight=0.01,
                  obstacle_warning_distance=1.2, obstacle_clearance_weight=0.5,
-                 obstacle_crash_penalty=100.0):
+                 obstacle_crash_penalty=100.0,
+                 enable_formation_cbf_filter=False,
+                 formation_cbf_d_safe=1.0,
+                 formation_cbf_gamma=2.0):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -41,6 +175,9 @@ class FormationPyBulletEnv(gym.Env):
         self.obstacle_clearance_weight = float(obstacle_clearance_weight)
         self.obstacle_crash_penalty = float(obstacle_crash_penalty)
         self.residual_release_distance = self.obstacle_warning_distance + 0.6
+        self.enable_formation_cbf_filter = bool(enable_formation_cbf_filter)
+        self.formation_cbf_d_safe = float(formation_cbf_d_safe)
+        self.formation_cbf_gamma = float(formation_cbf_gamma)
 
         if self.obstacle_warning_distance <= 0.03:
             raise ValueError("obstacle_warning_distance must exceed 0.03 m.")
@@ -51,6 +188,14 @@ class FormationPyBulletEnv(gym.Env):
             self.obstacle_crash_penalty,
         ) < 0.0:
             raise ValueError("Reward weights must be non-negative.")
+        if self.formation_cbf_d_safe <= 0.0 or not np.isfinite(
+            self.formation_cbf_d_safe
+        ):
+            raise ValueError("formation_cbf_d_safe must be positive and finite.")
+        if self.formation_cbf_gamma <= 0.0 or not np.isfinite(
+            self.formation_cbf_gamma
+        ):
+            raise ValueError("formation_cbf_gamma must be positive and finite.")
 
         # --- 1. PyBullet 初始化配置 ---
         self.render_mode = render_mode
@@ -82,6 +227,7 @@ class FormationPyBulletEnv(gym.Env):
         self.max_graph_agents = MAX_GRAPH_AGENTS
         # 2. 构建全局大矩阵并进行 2D 降维分块
         self._init_global_matrices()
+        self.formation_position_map = self._build_planar_formation_map()
 
         # --- 动作空间：两台 leader 在目标对齐坐标系中的二维残差速度 ---
         # [LeaderA_residual_vx, LeaderA_residual_vy,
@@ -190,6 +336,51 @@ class FormationPyBulletEnv(gym.Env):
         
         # 5. 提前求逆 (极大提升仿真速度)
         self.M_ff_inv = np.linalg.inv(self.M_ff)
+
+    def _build_planar_formation_map(self):
+        """Return H such that ideal planar positions satisfy p = H @ pL."""
+        n_agents = len(self.g_nom)
+        H = np.zeros((2 * n_agents, 2 * self.n_leaders), dtype=float)
+        H[:2 * self.n_leaders, :] = np.eye(2 * self.n_leaders)
+
+        follower_map_3d = -self.M_ff_inv @ self.M_fl
+        leader_xy_columns = []
+        leader_yaw_columns = []
+        for leader_index in range(self.n_leaders):
+            leader_xy_columns.extend((3 * leader_index, 3 * leader_index + 1))
+            leader_yaw_columns.append(3 * leader_index + 2)
+        follower_xy_rows = []
+        for follower_index in range(n_agents - self.n_leaders):
+            follower_xy_rows.extend((3 * follower_index, 3 * follower_index + 1))
+
+        yaw_coupling = follower_map_3d[
+            np.ix_(follower_xy_rows, leader_yaw_columns)
+        ]
+        if not np.allclose(yaw_coupling, 0.0, atol=1e-10):
+            raise ValueError(
+                "The configured formation couples follower position to leader "
+                "yaw, so a planar p = H @ pL map is not valid."
+            )
+        H[2 * self.n_leaders:, :] = follower_map_3d[
+            np.ix_(follower_xy_rows, leader_xy_columns)
+        ]
+
+        nominal_leaders = self.g_nom[:self.n_leaders, :2].reshape(-1)
+        mapped_nominal = (H @ nominal_leaders).reshape(n_agents, 2)
+        if not np.allclose(mapped_nominal, self.g_nom[:, :2], atol=1e-8):
+            raise ValueError(
+                "The planar formation map does not reconstruct g_nom from its "
+                "two leader positions."
+            )
+        return H
+
+    def _obstacle_centers(self):
+        """Return the current internal-obstacle centers used by the CBF-QP."""
+        centers = []
+        for obstacle_id in self.obstacles:
+            position, _ = p.getBasePositionAndOrientation(obstacle_id)
+            centers.append(position[:2])
+        return np.asarray(centers, dtype=float).reshape(-1, 2)
 
     def reset(self,seed=None, options=None):
         super().reset(seed=seed)
@@ -305,7 +496,22 @@ class FormationPyBulletEnv(gym.Env):
             self.leader_target_offsets,
         )
         self.last_residual_velocity = np.zeros((self.n_leaders, 2), dtype=np.float32)
+        self.last_unfiltered_leader_command = np.zeros(
+            (self.n_leaders, 2), dtype=np.float32
+        )
         self.last_leader_command = np.zeros((self.n_leaders, 2), dtype=np.float32)
+        self.last_formation_cbf_info = {
+            "status": (
+                "ready" if self.enable_formation_cbf_filter else "disabled"
+            ),
+            "solver_success": True,
+            "n_constraints": 0,
+            "min_barrier": np.nan,
+            "nominal_min_constraint_margin": np.nan,
+            "safe_min_constraint_margin": np.nan,
+            "correction_norm": 0.0,
+            "active_constraints": 0,
+        }
         # 初始化距离记录 (用两车中点计算)
         center_pos = self._get_center_pos()
 
@@ -342,7 +548,10 @@ class FormationPyBulletEnv(gym.Env):
         self.is_frame_locked = False
         self.locked_target_yaw = 0.0
         
-        return obs, {"obstacle_config_id": self.obstacle_config_id}
+        return obs, {
+            "obstacle_config_id": self.obstacle_config_id,
+            "formation_cbf_enabled": self.enable_formation_cbf_filter,
+        }
 
     def step(self, action):
         # print(action)
@@ -384,13 +593,60 @@ class FormationPyBulletEnv(gym.Env):
             dtype=np.float32,
         )
         residual_world = (target_to_world @ residual_target.T).T
-        leader_commands_world = self.nominal_controller.combine(
+        unfiltered_commands_world = self.nominal_controller.combine(
             nominal_world,
             residual_world,
         )
+        leader_commands_world = unfiltered_commands_world
+        if self.enable_formation_cbf_filter:
+            pL = np.asarray(leader_positions, dtype=float).reshape(-1)
+            try:
+                safe_flat, cbf_info = formation_cbf_filter(
+                    pL=pL,
+                    u_rl=unfiltered_commands_world.reshape(-1),
+                    H=self.formation_position_map,
+                    obstacles=self._obstacle_centers(),
+                    d_safe=self.formation_cbf_d_safe,
+                    gamma=self.formation_cbf_gamma,
+                    return_diagnostics=True,
+                )
+                leader_commands_world = safe_flat.reshape(self.n_leaders, 2)
+            except RuntimeError as error:
+                # Do not silently execute an unverified command when the safety
+                # QP fails.  Stopping is conservative, and the failure is
+                # exposed through info for evaluation and ablation logging.
+                leader_commands_world = np.zeros(
+                    (self.n_leaders, 2), dtype=float
+                )
+                cbf_info = {
+                    "status": "solver_failure_stop",
+                    "solver_success": False,
+                    "solver_message": str(error),
+                    "n_constraints": int(len(self.g_nom)),
+                    "min_barrier": np.nan,
+                    "nominal_min_constraint_margin": np.nan,
+                    "safe_min_constraint_margin": np.nan,
+                    "correction_norm": float(
+                        np.linalg.norm(unfiltered_commands_world)
+                    ),
+                    "active_constraints": 0,
+                }
+            self.last_formation_cbf_info = cbf_info
+        else:
+            self.last_formation_cbf_info = {
+                "status": "disabled",
+                "solver_success": True,
+                "n_constraints": 0,
+                "min_barrier": np.nan,
+                "nominal_min_constraint_margin": np.nan,
+                "safe_min_constraint_margin": np.nan,
+                "correction_norm": 0.0,
+                "active_constraints": 0,
+            }
 
         self.last_nominal_velocity = nominal_world.copy()
         self.last_residual_velocity = residual_world.copy()
+        self.last_unfiltered_leader_command = unfiltered_commands_world.copy()
         self.last_leader_command = leader_commands_world.copy()
 
         for robot_id, yaw, command_world in zip(
@@ -439,7 +695,43 @@ class FormationPyBulletEnv(gym.Env):
         )
         done = reward_info['done']
         # print(f"Step: {self.current_step}, Reward: {reward:.3f}, Progress: {reward_info['r_progress']:.3f}, Shape: {reward_info['r_shape']:.3f}, Collision: {reward_info['r_collision']:.3f}, Time: {reward_info['r_time']:.3f}, Smooth: {reward_info['r_smooth']:.3f}")
-        info = {}
+        info = {
+            "formation_cbf_enabled": self.enable_formation_cbf_filter,
+            "formation_cbf_status": self.last_formation_cbf_info["status"],
+            "formation_cbf_solver_success": bool(
+                self.last_formation_cbf_info["solver_success"]
+            ),
+            "formation_cbf_solver_message": self.last_formation_cbf_info.get(
+                "solver_message", ""
+            ),
+            "formation_cbf_n_constraints": int(
+                self.last_formation_cbf_info["n_constraints"]
+            ),
+            "formation_cbf_min_barrier": float(
+                self.last_formation_cbf_info["min_barrier"]
+            ),
+            "formation_cbf_nominal_min_margin": float(
+                self.last_formation_cbf_info[
+                    "nominal_min_constraint_margin"
+                ]
+            ),
+            "formation_cbf_safe_min_margin": float(
+                self.last_formation_cbf_info["safe_min_constraint_margin"]
+            ),
+            "formation_cbf_correction_norm": float(
+                self.last_formation_cbf_info["correction_norm"]
+            ),
+            "formation_cbf_applied": bool(
+                self.last_formation_cbf_info["correction_norm"] > 1e-8
+            ),
+            "formation_cbf_active_constraints": int(
+                self.last_formation_cbf_info["active_constraints"]
+            ),
+            "leader_command_unfiltered": (
+                self.last_unfiltered_leader_command.copy()
+            ),
+            "leader_command_safe": self.last_leader_command.copy(),
+        }
         if done:
             info['ep_rew_progress'] = self.ep_rew_progress
             info['ep_rew_shape'] = self.ep_rew_shape

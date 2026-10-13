@@ -1,0 +1,3502 @@
+{
+  "configuration": [
+    [
+      3.0,
+      1.0,
+      0.0
+    ],
+    [
+      1.0,
+      -3.0,
+      1.5707963267948966
+    ],
+    [
+      -2.3999932146381933,
+      3.0000050170943267,
+      -1.5707963267948966
+    ],
+    [
+      -1.5999932145220992,
+      -1.0000069852292406,
+      3.141592653589793
+    ]
+  ],
+  "initial_spectral_radius": 1.1547005383792515,
+  "optimized_spectral_radius": 0.9474691840023025,
+  "objective_value": 3.920000000491112,
+  "min_degree_singular_value": 2.0000069852292404,
+  "minimum_absolute_coordinate_separation": 0.8000000001160941,
+  "minimum_pairwise_distance": 3.280234256069647,
+  "changed_coordinate_signs": 1,
+  "success": true,
+  "solver_success": true,
+  "message": "Optimization terminated successfully.",
+  "iterations": 130,
+  "function_evaluations": 4163,
+  "seed": 11,
+  "triplets": [
+    [
+      0,
+      3,
+      2
+    ],
+    [
+      1,
+      2,
+      3
+    ]
+  ],
+  "constrained_pairs": [
+    [
+      0,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      2,
+      3
+    ]
+  ],
+  "initial_eigenvalues": [
+    [
+      1.1547005383792515,
+      0.0
+    ],
+    [
+      -1.1547005383792515,
+      0.0
+    ],
+    [
+      0.0,
+      0.5773502691896258
+    ],
+    [
+      0.0,
+      -0.5773502691896258
+    ]
+  ],
+  "optimized_eigenvalues": [
+    [
+      0.9474691840023022,
+      0.0
+    ],
+    [
+      -0.9474691840023025,
+      0.0
+    ],
+    [
+      0.0,
+      0.5773487354989909
+    ],
+    [
+      0.0,
+      -0.5773487354989909
+    ]
+  ],
+  "nominal_coordinate_signs": [
+    [
+      1,
+      -1
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      -1
+    ],
+    [
+      1,
+      -1
+    ],
+    [
+      1,
+      1
+    ]
+  ],
+  "optimized_coordinate_signs": [
+    [
+      1,
+      -1
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      -1
+    ],
+    [
+      1,
+      -1
+    ],
+    [
+      -1,
+      1
+    ]
+  ],
+  "x_order": [
+    2,
+    3,
+    1,
+    0
+  ],
+  "y_order": [
+    1,
+    3,
+    0,
+    2
+  ],
+  "initial_sigma_min": 2.0,
+  "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\optimized_configuration.npy",
+  "experiment": "four-agent free-order absolute-separation optimization",
+  "best_seed": 11,
+  "selection_reason": "minimum objective among feasible runs",
+  "number_of_runs": 20,
+  "number_of_feasible_runs": 20,
+  "requested_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "rho_limit": 0.95,
+  "theta": 0.0,
+  "search_radius": 10.0,
+  "coordinate_margin": 0.8,
+  "minimum_pairwise_distance_limit": 1.0,
+  "min_degree_singular_value_limit": 0.001,
+  "x_bounds": null,
+  "y_bounds": null,
+  "runs": [
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000218279249923,
+          2.9999997712102062,
+          -1.5707963267948966
+        ],
+        [
+          -1.6000218275916462,
+          -1.000050473642339,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.947469974129416,
+      "objective_value": 3.920000004433912,
+      "min_degree_singular_value": 2.000050473642339,
+      "minimum_absolute_coordinate_separation": 0.8000000003333461,
+      "minimum_pairwise_distance": 3.280230420554513,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 133,
+      "function_evaluations": 3984,
+      "seed": 0,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.947469974129416,
+          0.0
+        ],
+        [
+          -0.9474699741294158,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773356768732278
+        ],
+        [
+          0.0,
+          -0.5773356768732278
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_0_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000030022862253,
+          2.999960794677074,
+          -1.5707963267948966
+        ],
+        [
+          -1.600003001576071,
+          -1.0000101119162055,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474694542392176,
+      "objective_value": 3.9200000036457636,
+      "min_degree_singular_value": 2.0000101119162057,
+      "minimum_absolute_coordinate_separation": 0.8000000007101544,
+      "minimum_pairwise_distance": 3.280240107163195,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 149,
+      "function_evaluations": 4585,
+      "seed": 1,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474694542392174,
+          0.0
+        ],
+        [
+          -0.9474694542392176,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773435775863736
+        ],
+        [
+          0.0,
+          -0.5773435775863736
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_1_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.400005146271611,
+          3.000047995077077,
+          -1.5707963267948966
+        ],
+        [
+          -1.600005145975076,
+          -1.0000357439333498,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.947469513477436,
+      "objective_value": 3.9200000044644194,
+      "min_degree_singular_value": 2.00003574393335,
+      "minimum_absolute_coordinate_separation": 0.8000000002965351,
+      "minimum_pairwise_distance": 3.280226178884789,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 143,
+      "function_evaluations": 4127,
+      "seed": 2,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.947469513477436,
+          0.0
+        ],
+        [
+          -0.947469513477436,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773445690875529
+        ],
+        [
+          0.0,
+          -0.5773445690875529
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_2_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.399983339333699,
+          2.999980685208719,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999833387141034,
+          -1.0000069515085832,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474689112556715,
+      "objective_value": 3.920000002711429,
+      "min_degree_singular_value": 2.000006951508583,
+      "minimum_absolute_coordinate_separation": 0.8000000006195958,
+      "minimum_pairwise_distance": 3.2802264488301605,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 139,
+      "function_evaluations": 4189,
+      "seed": 3,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474689112556715,
+          0.0
+        ],
+        [
+          -0.9474689112556715,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773464038962651
+        ],
+        [
+          0.0,
+          -0.5773464038962651
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_3_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.400023544322977,
+          3.0000187119192807,
+          -1.5707963267948966
+        ],
+        [
+          -1.6000235440598471,
+          -0.9999846636150425,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474700215320371,
+      "objective_value": 3.920000002430762,
+      "min_degree_singular_value": 1.9999846636150425,
+      "minimum_absolute_coordinate_separation": 0.8000000002631298,
+      "minimum_pairwise_distance": 3.280271905717659,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 142,
+      "function_evaluations": 4483,
+      "seed": 4,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474700215320371,
+          0.0
+        ],
+        [
+          -0.9474700215320371,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773564970002485
+        ],
+        [
+          0.0,
+          -0.5773564970002485
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_4_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.399993210557012,
+          3.0000355126029805,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999932095590803,
+          -0.9999773354253052,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474691838197417,
+      "objective_value": 3.9200000046612433,
+      "min_degree_singular_value": 1.9999773354253052,
+      "minimum_absolute_coordinate_separation": 0.8000000009979318,
+      "minimum_pairwise_distance": 3.2802523300145356,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 124,
+      "function_evaluations": 3789,
+      "seed": 5,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474691838197417,
+          0.0
+        ],
+        [
+          -0.9474691838197414,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773602291360501
+        ],
+        [
+          0.0,
+          -0.5773602291360501
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_5_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000348608800737,
+          2.9999881840186013,
+          -1.5707963267948966
+        ],
+        [
+          -1.6000348608504407,
+          -1.0000341532345416,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474703340472395,
+      "objective_value": 3.920000003819593,
+      "min_degree_singular_value": 2.000034153234542,
+      "minimum_absolute_coordinate_separation": 0.800000000029633,
+      "minimum_pairwise_distance": 3.280250701679042,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 120,
+      "function_evaluations": 3917,
+      "seed": 6,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474703340472393,
+          0.0
+        ],
+        [
+          -0.9474703340472395,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773392731069439
+        ],
+        [
+          0.0,
+          -0.5773392731069439
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_6_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.400010063804482,
+          2.9999877725522412,
+          -1.5707963267948966
+        ],
+        [
+          -1.600010063210488,
+          -0.9999954782856815,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474696492495407,
+      "objective_value": 3.920000002035688,
+      "min_degree_singular_value": 1.9999954782856815,
+      "minimum_absolute_coordinate_separation": 0.800000000593994,
+      "minimum_pairwise_distance": 3.280254626652255,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 128,
+      "function_evaluations": 4128,
+      "seed": 7,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474696492495407,
+          0.0
+        ],
+        [
+          -0.9474696492495406,
+          0.0
+        ],
+        [
+          0.0,
+          0.577350397904625
+        ],
+        [
+          0.0,
+          -0.577350397904625
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_7_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000125281031197,
+          2.9999840931780692,
+          -1.5707963267948966
+        ],
+        [
+          -1.60001252793255,
+          -0.9999868591158525,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474697173334866,
+      "objective_value": 3.920000001217207,
+      "min_degree_singular_value": 1.9999868591158525,
+      "minimum_absolute_coordinate_separation": 0.8000000001705696,
+      "minimum_pairwise_distance": 3.280261835450866,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 136,
+      "function_evaluations": 4051,
+      "seed": 8,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474697173334866,
+          0.0
+        ],
+        [
+          -0.9474697173334865,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773525319977902
+        ],
+        [
+          0.0,
+          -0.5773525319977902
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_8_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.3999838646316363,
+          3.0000178260304384,
+          -1.5707963267948966
+        ],
+        [
+          -1.599983864548868,
+          -0.9999881541496882,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474689258043675,
+      "objective_value": 3.920000001210546,
+      "min_degree_singular_value": 1.9999881541496887,
+      "minimum_absolute_coordinate_separation": 0.8000000000827683,
+      "minimum_pairwise_distance": 3.2802383266244597,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 134,
+      "function_evaluations": 4252,
+      "seed": 9,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474689258043675,
+          0.0
+        ],
+        [
+          -0.9474689258043673,
+          0.0
+        ],
+        [
+          0.0,
+          0.57735540411528
+        ],
+        [
+          0.0,
+          -0.57735540411528
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_9_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.3999929861388227,
+          2.999975688745418,
+          -1.5707963267948966
+        ],
+        [
+          -1.599992986039935,
+          -0.9999694467517752,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474691776936749,
+      "objective_value": 3.9200000018998136,
+      "min_degree_singular_value": 1.9999694467517752,
+      "minimum_absolute_coordinate_separation": 0.8000000000988878,
+      "minimum_pairwise_distance": 3.2802569627063147,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 134,
+      "function_evaluations": 4097,
+      "seed": 10,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474691776936749,
+          0.0
+        ],
+        [
+          -0.9474691776936749,
+          0.0
+        ],
+        [
+          0.0,
+          0.577356749818521
+        ],
+        [
+          0.0,
+          -0.577356749818521
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_10_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.3999932146381933,
+          3.0000050170943267,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999932145220992,
+          -1.0000069852292406,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474691840023025,
+      "objective_value": 3.920000000491112,
+      "min_degree_singular_value": 2.0000069852292404,
+      "minimum_absolute_coordinate_separation": 0.8000000001160941,
+      "minimum_pairwise_distance": 3.280234256069647,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 130,
+      "function_evaluations": 4163,
+      "seed": 11,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474691840023022,
+          0.0
+        ],
+        [
+          -0.9474691840023025,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773487354989909
+        ],
+        [
+          0.0,
+          -0.5773487354989909
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_11_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.3999495435573284,
+          2.9999883699085945,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999495424034156,
+          -0.9999865010696865,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474679779259128,
+      "objective_value": 3.9200000086402573,
+      "min_degree_singular_value": 1.9999865010696865,
+      "minimum_absolute_coordinate_separation": 0.8000000011539128,
+      "minimum_pairwise_distance": 3.280212130174999,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 142,
+      "function_evaluations": 4478,
+      "seed": 12,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474679779259128,
+          0.0
+        ],
+        [
+          -0.9474679779259128,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773530468914271
+        ],
+        [
+          0.0,
+          -0.5773530468914271
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_12_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000048752944982,
+          2.999994311646102,
+          -1.5707963267948966
+        ],
+        [
+          -1.600004874894478,
+          -0.9999967169236803,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474695059862998,
+      "objective_value": 3.920000001210726,
+      "min_degree_singular_value": 1.9999967169236803,
+      "minimum_absolute_coordinate_separation": 0.8000000004000203,
+      "minimum_pairwise_distance": 3.2802497590566344,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 133,
+      "function_evaluations": 4083,
+      "seed": 13,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474695059862995,
+          0.0
+        ],
+        [
+          -0.9474695059862998,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773506695691162
+        ],
+        [
+          0.0,
+          -0.5773506695691162
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_13_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.399999960067373,
+          2.999999996422334,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999999564102305,
+          -1.0000000018780941,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474693699957091,
+      "objective_value": 3.9200000102400026,
+      "min_degree_singular_value": 2.000000001878094,
+      "minimum_absolute_coordinate_separation": 0.8000000036571424,
+      "minimum_pairwise_distance": 3.280243857675954,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 124,
+      "function_evaluations": 3974,
+      "seed": 14,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474693699957091,
+          0.0
+        ],
+        [
+          -0.9474693699957091,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502683032055
+        ],
+        [
+          0.0,
+          -0.5773502683032055
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_14_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.39999687964358,
+          3.000059310647307,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999968794863402,
+          -1.0000404982492752,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474692852076945,
+      "objective_value": 3.9200000056176068,
+      "min_degree_singular_value": 2.0000404982492754,
+      "minimum_absolute_coordinate_separation": 0.8000000001572398,
+      "minimum_pairwise_distance": 3.2802167278979772,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 123,
+      "function_evaluations": 4029,
+      "seed": 15,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474692852076945,
+          0.0
+        ],
+        [
+          -0.9474692852076944,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773442854399407
+        ],
+        [
+          0.0,
+          -0.5773442854399407
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_15_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.400000903788454,
+          3.0000067781461333,
+          -1.5707963267948966
+        ],
+        [
+          -1.6000009037438963,
+          -0.9999781004546429,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474693963425211,
+      "objective_value": 3.9200000006519296,
+      "min_degree_singular_value": 1.9999781004546429,
+      "minimum_absolute_coordinate_separation": 0.800000000044558,
+      "minimum_pairwise_distance": 3.2802579621319565,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 141,
+      "function_evaluations": 4275,
+      "seed": 16,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.947469396342521,
+          0.0
+        ],
+        [
+          -0.9474693963425211,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773572433118935
+        ],
+        [
+          0.0,
+          -0.5773572433118935
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_16_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.399982069681961,
+          2.9999959404187244,
+          -1.5707963267948966
+        ],
+        [
+          -1.5999820693701823,
+          -0.9999824731710274,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474688762184407,
+      "objective_value": 3.9200000018396546,
+      "min_degree_singular_value": 1.9999824731710274,
+      "minimum_absolute_coordinate_separation": 0.8000000003117789,
+      "minimum_pairwise_distance": 3.280240367514176,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 128,
+      "function_evaluations": 3893,
+      "seed": 17,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474688762184406,
+          0.0
+        ],
+        [
+          -0.9474688762184407,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773549381342981
+        ],
+        [
+          0.0,
+          -0.5773549381342981
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_17_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000060616024355,
+          3.000005641483154,
+          -1.5707963267948966
+        ],
+        [
+          -1.600006060465868,
+          -1.0000004896394856,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474695386874179,
+      "objective_value": 3.9200000032879276,
+      "min_degree_singular_value": 2.000000489639486,
+      "minimum_absolute_coordinate_separation": 0.8000000011365676,
+      "minimum_pairwise_distance": 3.280248398506055,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 133,
+      "function_evaluations": 4219,
+      "seed": 18,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474695386874177,
+          0.0
+        ],
+        [
+          -0.9474695386874179,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773506706939697
+        ],
+        [
+          0.0,
+          -0.5773506706939697
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_18_configuration.npy"
+    },
+    {
+      "configuration": [
+        [
+          3.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          -3.0,
+          1.5707963267948966
+        ],
+        [
+          -2.4000349907326584,
+          2.999991339517952,
+          -1.5707963267948966
+        ],
+        [
+          -1.6000349891367334,
+          -1.0000276463670523,
+          3.141592653589793
+        ]
+      ],
+      "initial_spectral_radius": 1.1547005383792515,
+      "optimized_spectral_radius": 0.9474703375089083,
+      "objective_value": 3.9200000077565065,
+      "min_degree_singular_value": 2.0000276463670525,
+      "minimum_absolute_coordinate_separation": 0.800000001595925,
+      "minimum_pairwise_distance": 3.280254770598065,
+      "changed_coordinate_signs": 1,
+      "success": true,
+      "solver_success": true,
+      "message": "Optimization terminated successfully.",
+      "iterations": 134,
+      "function_evaluations": 4224,
+      "seed": 19,
+      "triplets": [
+        [
+          0,
+          3,
+          2
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "constrained_pairs": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "initial_eigenvalues": [
+        [
+          1.1547005383792515,
+          0.0
+        ],
+        [
+          -1.1547005383792515,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773502691896258
+        ],
+        [
+          0.0,
+          -0.5773502691896258
+        ]
+      ],
+      "optimized_eigenvalues": [
+        [
+          0.9474703375089082,
+          0.0
+        ],
+        [
+          -0.9474703375089083,
+          0.0
+        ],
+        [
+          0.0,
+          0.5773414550804968
+        ],
+        [
+          0.0,
+          -0.5773414550804968
+        ]
+      ],
+      "nominal_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "optimized_coordinate_signs": [
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "x_order": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "y_order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "initial_sigma_min": 2.0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\four_agent_absolute_order_20seeds\\seeds\\seed_19_configuration.npy"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "configuration": [
+    [
+      6.0,
+      2.0,
+      0.0
+    ],
+    [
+      -6.0,
+      -2.0,
+      3.141592653589793
+    ],
+    [
+      3.0,
+      1.0,
+      1.5707963267948966
+    ],
+    [
+      -3.0,
+      -1.0,
+      -1.5707963267948966
+    ]
+  ],
+  "initial_spectral_radius": 0.3333333333333333,
+  "optimized_spectral_radius": 0.3333333333333333,
+  "objective_value": 0.0,
+  "min_degree_singular_value": 3.0,
+  "min_signed_coordinate_separation": 1.0,
+  "minimum_pairwise_distance": 3.1622776601683795,
+  "success": true,
+  "message": "The nominal configuration already satisfies the constraints.",
+  "iterations": 0,
+  "function_evaluations": 1,
+  "seed": 13,
+  "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_13_configuration.npy"
+}

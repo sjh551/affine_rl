@@ -1,63 +1,63 @@
 {
   "configuration": [
     [
-      3.0,
-      1.0,
+      6.0,
+      2.0,
       0.0
     ],
     [
+      -6.0,
+      -2.0,
+      3.141592653589793
+    ],
+    [
+      3.0,
       1.0,
-      -3.0,
       1.5707963267948966
     ],
     [
-      -10.999999194817587,
-      4.234985368243895,
+      -3.0,
+      -1.0,
       -1.5707963267948966
-    ],
-    [
-      -11.799999339246696,
-      -0.4513520362975756,
-      3.141592653589793
     ]
   ],
-  "initial_spectral_radius": 1.1547005383792515,
-  "optimized_spectral_radius": 1.0044944059785332,
-  "objective_value": 179.266175714946,
-  "min_degree_singular_value": 1.4513520362975756,
-  "min_signed_coordinate_separation": 0.8000001444291094,
-  "minimum_pairwise_distance": 4.47213595499958,
-  "success": false,
-  "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440597853328",
-  "iterations": 300,
-  "function_evaluations": 4995,
-  "seed": 75,
-  "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\optimized_configuration.npy",
-  "best_seed": 75,
-  "selection_reason": "minimum normalized violation; no feasible run found",
+  "initial_spectral_radius": 0.3333333333333333,
+  "optimized_spectral_radius": 0.3333333333333333,
+  "objective_value": 0.0,
+  "min_degree_singular_value": 3.0,
+  "min_signed_coordinate_separation": 1.0,
+  "minimum_pairwise_distance": 3.1622776601683795,
+  "success": true,
+  "message": "The nominal configuration already satisfies the constraints.",
+  "iterations": 0,
+  "function_evaluations": 1,
+  "seed": 0,
+  "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\optimized_configuration.npy",
+  "best_seed": 0,
+  "selection_reason": "minimum objective among feasible runs",
   "number_of_runs": 20,
-  "number_of_feasible_runs": 0,
+  "number_of_feasible_runs": 20,
   "requested_seeds": [
-    60,
-    61,
-    62,
-    63,
-    64,
-    65,
-    66,
-    67,
-    68,
-    69,
-    70,
-    71,
-    72,
-    73,
-    74,
-    75,
-    76,
-    77,
-    78,
-    79
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
   ],
   "rho_limit": 0.95,
   "theta": 0.0,
@@ -71,722 +71,722 @@
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999892212038029,
-          5.387466384854502,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799896807712313,
-          -0.47135624479856775,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044945019767044,
-      "objective_value": 183.4154880374879,
-      "min_degree_singular_value": 1.4713562447985673,
-      "min_signed_coordinate_separation": 0.8000045956742845,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449450197670447",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 60,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_60_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 0,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_0_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.99994052969352,
-          3.111082804514706,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.800024900479222,
-          -0.03904317719098849,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044948922835737,
-      "objective_value": 178.37502625122352,
-      "min_degree_singular_value": 1.0390431771909885,
-      "min_signed_coordinate_separation": 0.8000843707857026,
-      "minimum_pairwise_distance": 3.2501428739353626,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449489228357374",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 61,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_61_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 1,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_1_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999993631836956,
-          4.639895106632572,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799994409265501,
-          -2.103384697332231,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004494413099409,
-      "objective_value": 181.34648799094813,
-      "min_degree_singular_value": 3.103384697332231,
-      "min_signed_coordinate_separation": 0.8000007774285454,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494413099408945",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 62,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_62_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 2,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_2_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999992249514516,
-          2.896397993248307,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.800004337807772,
-          -2.1627696945276567,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004494474010024,
-      "objective_value": 178.80268807410093,
-      "min_degree_singular_value": 3.1627696945276567,
-      "min_signed_coordinate_separation": 0.800012088293256,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449447401002394",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 63,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_63_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 3,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_3_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999811208622457,
-          1.9814727758890034,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799913522761964,
-          -2.0552171274488065,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004495074950051,
-      "objective_value": 179.58558310849676,
-      "min_degree_singular_value": 3.0552171274488065,
-      "min_signed_coordinate_separation": 0.8001023141395063,
-      "minimum_pairwise_distance": 4.115219203007394,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054495074950051015",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 64,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_64_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 4,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_4_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.99999724639012,
-          7.00089169017197,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799997808982118,
-          -1.0011323270789287,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004494409514305,
-      "objective_value": 193.4470419645518,
-      "min_degree_singular_value": 2.0011323270789294,
-      "min_signed_coordinate_separation": 0.8000005625919986,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440951430495",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 65,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_65_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 5,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_5_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999999941305319,
-          2.638727135041859,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.800000370307103,
-          -0.3771838851639,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.00449440698232,
-      "objective_value": 177.95842333936613,
-      "min_degree_singular_value": 1.3771838851639,
-      "min_signed_coordinate_separation": 0.8000004290017841,
-      "minimum_pairwise_distance": 3.120211526195232,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440698232011",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 66,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_66_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 6,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_6_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.99997674964134,
-          4.26700603470709,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799976822117404,
-          -2.189316194802774,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944207855306,
-      "objective_value": 180.45890436637524,
-      "min_degree_singular_value": 3.1893161948027737,
-      "min_signed_coordinate_separation": 0.800000072476065,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494420785530684",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 67,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_67_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 7,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_7_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999997471244829,
-          3.0154564962542514,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799997957547358,
-          -0.7174819133723789,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944089576266,
-      "objective_value": 177.51996885028882,
-      "min_degree_singular_value": 1.7174819133723789,
-      "min_signed_coordinate_separation": 0.8000004863025296,
-      "minimum_pairwise_distance": 3.81769956232154,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494408957626694",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 68,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_68_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 8,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_8_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.99994322221751,
-          3.289832599076798,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799947085436138,
-          -0.1479825660805747,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944635738429,
-      "objective_value": 178.24786979724016,
-      "min_degree_singular_value": 1.1479825660805747,
-      "min_signed_coordinate_separation": 0.8000038632186275,
-      "minimum_pairwise_distance": 3.529671272363865,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449446357384291",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 69,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_69_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 9,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_9_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999998903431791,
-          11.640675708932108,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799999762882463,
-          -1.9841732267749692,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944099670718,
-      "objective_value": 253.06984754259847,
-      "min_degree_singular_value": 2.9841732267749688,
-      "min_signed_coordinate_separation": 0.8000008594506713,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440996707189",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 70,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_70_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 10,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_10_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999997772680963,
-          11.447624486788445,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799997877757155,
-          -1.178490838088926,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944067322161,
-      "objective_value": 248.8341365512241,
-      "min_degree_singular_value": 2.1784908380889263,
-      "min_signed_coordinate_separation": 0.800000105076192,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440673221617",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 71,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_71_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 11,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_11_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999997830475769,
-          9.991457101188894,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.79999797060018,
-          -1.6655736324907846,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004494406878948,
-      "objective_value": 226.76338155011896,
-      "min_degree_singular_value": 2.6655736324907853,
-      "min_signed_coordinate_separation": 0.8000001401244106,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440687894813",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 72,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_72_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 12,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_12_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.99999975854781,
-          4.8554920394225904,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.800000236199285,
-          -1.4788844210227416,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004494407363953,
-      "objective_value": 181.11218032512264,
-      "min_degree_singular_value": 2.478884421022742,
-      "min_signed_coordinate_separation": 0.8000004776514746,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440736395306",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 73,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_73_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 13,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_13_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999792891119196,
-          10.211357988428698,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799796228988814,
-          -1.4811641175739023,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044945625195392,
-      "objective_value": 229.66747448231885,
-      "min_degree_singular_value": 2.4811641175739023,
-      "min_signed_coordinate_separation": 0.8000033378696187,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494562519539214",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 74,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_74_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 14,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_14_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999999194817587,
-          4.234985368243895,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799999339246696,
-          -0.4513520362975756,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944059785332,
-      "objective_value": 179.266175714946,
-      "min_degree_singular_value": 1.4513520362975756,
-      "min_signed_coordinate_separation": 0.8000001444291094,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449440597853328",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 75,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_75_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 15,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_15_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999951473287807,
-          11.333975787706065,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799960843816791,
-          -1.6281997468281098,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944871926826,
-      "objective_value": 247.28812767280553,
-      "min_degree_singular_value": 2.628199746828109,
-      "min_signed_coordinate_separation": 0.8000093705289846,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494487192682683",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 76,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_76_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 16,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_16_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.99999348228884,
-          8.602834573616487,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799993843204959,
-          -1.995266965617082,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944109920728,
-      "objective_value": 209.82207287842533,
-      "min_degree_singular_value": 2.9952669656170823,
-      "min_signed_coordinate_separation": 0.800000360916119,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449441099207286",
-      "iterations": 300,
-      "function_evaluations": 5000,
-      "seed": 77,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_77_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 17,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_17_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999955890672446,
-          4.243055662937906,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.799955905427417,
-          -0.5934650566408974,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.0044944345946816,
-      "objective_value": 179.1487997941954,
-      "min_degree_singular_value": 1.5934650566408974,
-      "min_signed_coordinate_separation": 0.8000000147549713,
-      "minimum_pairwise_distance": 4.47213595499958,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.05449443459468162",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 78,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_78_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 18,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_18_configuration.npy"
     },
     {
       "configuration": [
         [
-          3.0,
-          1.0,
+          6.0,
+          2.0,
           0.0
         ],
         [
+          -6.0,
+          -2.0,
+          3.141592653589793
+        ],
+        [
+          3.0,
           1.0,
-          -3.0,
           1.5707963267948966
         ],
         [
-          -10.999986892950163,
-          2.574452883115201,
+          -3.0,
+          -1.0,
           -1.5707963267948966
-        ],
-        [
-          -11.800034177493734,
-          -0.601613606629853,
-          3.141592653589793
         ]
       ],
-      "initial_spectral_radius": 1.1547005383792515,
-      "optimized_spectral_radius": 1.004494664260447,
-      "objective_value": 177.78014145134432,
-      "min_degree_singular_value": 1.601613606629853,
-      "min_signed_coordinate_separation": 0.8000472845435702,
-      "minimum_pairwise_distance": 3.2752822786421034,
-      "success": false,
-      "message": "The solution does not satisfy the constraints, MAXCV = 0.054494664260447134",
-      "iterations": 300,
-      "function_evaluations": 4995,
-      "seed": 79,
-      "configuration_file": "D:\\Workspace\\ScientificResearch\\Graduation_Project\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_79_configuration.npy"
+      "initial_spectral_radius": 0.3333333333333333,
+      "optimized_spectral_radius": 0.3333333333333333,
+      "objective_value": 0.0,
+      "min_degree_singular_value": 3.0,
+      "min_signed_coordinate_separation": 1.0,
+      "minimum_pairwise_distance": 3.1622776601683795,
+      "success": true,
+      "message": "The nominal configuration already satisfies the constraints.",
+      "iterations": 0,
+      "function_evaluations": 1,
+      "seed": 19,
+      "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\seeds\\seed_19_configuration.npy"
     }
   ]
 }

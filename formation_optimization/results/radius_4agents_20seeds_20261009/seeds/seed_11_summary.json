@@ -1,0 +1,36 @@
+{
+  "configuration": [
+    [
+      3.0,
+      1.0,
+      0.0
+    ],
+    [
+      1.0,
+      -3.0,
+      1.5707963267948966
+    ],
+    [
+      -10.99982113190024,
+      5.6031271188539495,
+      -1.5707963267948966
+    ],
+    [
+      -11.79982728903331,
+      -0.5440329763504161,
+      3.141592653589793
+    ]
+  ],
+  "initial_spectral_radius": 1.1547005383792515,
+  "optimized_spectral_radius": 1.0044945583576663,
+  "objective_value": 184.41755971038268,
+  "min_degree_singular_value": 1.5440329763504161,
+  "min_signed_coordinate_separation": 0.800006157133069,
+  "minimum_pairwise_distance": 4.47213595499958,
+  "success": false,
+  "message": "The solution does not satisfy the constraints, MAXCV = 0.05449455835766637",
+  "iterations": 300,
+  "function_evaluations": 5000,
+  "seed": 11,
+  "configuration_file": "D:\\Workspace\\ScientificResearch\\first paper\\Code\\Leader_Follower_RL\\formation_optimization\\results\\radius_4agents_20seeds_20261009\\seeds\\seed_11_configuration.npy"
+}

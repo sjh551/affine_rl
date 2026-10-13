@@ -146,3 +146,41 @@ python formation_optimization/evaluate_formation.py --steps 300
 ```
 
 `POMDP_env.FormationPyBulletEnv` 接收 `nominal_configuration`，因此检验只加载结果，不重新优化。
+
+## 局部夹持条件验证
+
+验证“每个跟随者在固定 `theta` 坐标系的每个方向上，都严格位于其控制
+三元组的两个参考邻居之间”是否能够保证跟随者速度迭代稳定：
+
+```powershell
+python formation_optimization/verify_triplet_betweenness.py `
+  --agent-counts 4 5 6 7 8 `
+  --samples 10000 `
+  --seed 0
+```
+
+`--samples` 是每种智能体规模的随机样本数；上面的命令共检查 50000 个随机
+构型。脚本同时检查原始四智能体构型、各规模的等距严格夹持构型、一个只满足
+非严格闭区间条件的端点反例，并执行随机反例搜索。结果保存到
+`formation_optimization/results/betweenness_verification.json`。
+
+这里验证的是同步/Jacobi 跟随者速度迭代矩阵
+`T_ff = D_ff^{-1} A_ff` 的 `rho(T_ff) < 1`。该结论不能单独替代包含采样
+步长、位置反馈、执行器、APF 和接触动力学的完整 PyBullet 闭环稳定性检验。
+
+比较等距排列与严格夹持约束下的数值最小谱半径：
+
+```powershell
+python formation_optimization/optimize_path_betweenness.py `
+  --agent-counts 4 5 6 7 8 `
+  --gap-margins 0.02 `
+  --min-distances 0.5 0.8 1.0 `
+  --starts 50 `
+  --seed 0
+```
+
+这里的间隔是相邻路径节点相对于两领导者坐标跨度的归一化间隔。优化结果保存到
+`formation_optimization/results/path_betweenness_optimization.json`。`--min-distances`
+对所有智能体对直接施加 `||p_i-p_j||_2 >= d_min`；固定领导者跨度无法容纳
+指定数量的智能体时，结果会明确记录为不可行。该程序执行的是多起点局部非线性
+优化；重复得到相同数值可以增强数值可信度，但不能替代全局最优证明。
