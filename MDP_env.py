@@ -158,7 +158,8 @@ class FormationPyBulletEnv(gym.Env):
                  obstacle_crash_penalty=100.0,
                  enable_formation_cbf_filter=False,
                  formation_cbf_d_safe=1.0,
-                 formation_cbf_gamma=2.0):
+                 formation_cbf_gamma=2.0,
+                 enable_walls=True):
         super(FormationPyBulletEnv, self).__init__()
         
         # self.k_accel_angular = k_accel_angular
@@ -306,6 +307,10 @@ class FormationPyBulletEnv(gym.Env):
         self.max_steps = 1500
         self.wall_length = 20.0 # 墙的长度的一半
         self.wall_width = 10.0 # 墙的宽度的一半
+        # 墙体开关只控制实体墙和对应的 Wall_Out 终止判定。
+        # wall_length/wall_width 仍作为生成范围和观测归一化尺度使用。
+        self.enable_walls = bool(enable_walls)
+        self.wall_ids = []
         self.enable_obstacles = enable_obstacles
         self.last_center_dist = None
         # 用于可视化的线段ID
@@ -388,8 +393,10 @@ class FormationPyBulletEnv(gym.Env):
         p.setGravity(0, 0, -9.8)
         p.loadURDF("plane.urdf")
         
-        # --- 创建围墙 ---
-        self._create_walls()
+        # --- 按配置创建四周围墙 ---
+        self.wall_ids = []
+        if self.enable_walls:
+            self._create_walls()
 
         # --- 随机生成目标点 ---
         tx = self.np_random.uniform(self.wall_length-4.5, self.wall_length-4.0)
@@ -1216,15 +1223,16 @@ class FormationPyBulletEnv(gym.Env):
 
 
 
-        # A. 撞墙检测
-        limit_x = self.wall_length - 0.5 - 0.6
-        limit_y = self.wall_width - 0.5 - 0.6
-        for i, pos_2d in enumerate(all_pos):
-            if abs(pos_2d[0]) > limit_x or abs(pos_2d[1]) > limit_y:
-                r_collision -= k_wall_crash
-                done = True
-                reason = f"Wall_Out (Bot {i})" 
-                break
+        # A. 撞墙检测。关闭围墙时也关闭相应的虚拟边界终止逻辑。
+        if self.enable_walls:
+            limit_x = self.wall_length - 0.5 - 0.6
+            limit_y = self.wall_width - 0.5 - 0.6
+            for i, pos_2d in enumerate(all_pos):
+                if abs(pos_2d[0]) > limit_x or abs(pos_2d[1]) > limit_y:
+                    r_collision -= k_wall_crash
+                    done = True
+                    reason = f"Wall_Out (Bot {i})"
+                    break
 
         # B. 团队互撞检测
         if not done:
@@ -1358,6 +1366,8 @@ class FormationPyBulletEnv(gym.Env):
     def _create_walls(self):
         """创建四周的围墙"""
         self.wall_ids = []
+        if not self.enable_walls:
+            return
         wall_thickness = 0.5
         wall_height = 1.0
         wall_length = self.wall_length   # 围墙长

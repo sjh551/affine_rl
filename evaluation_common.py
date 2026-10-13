@@ -61,6 +61,11 @@ def parse_evaluation_args(description):
     )
     parser.add_argument("--max-steps", type=int, default=None)
     parser.add_argument("--render", action="store_true")
+    parser.add_argument(
+        "--no-walls",
+        action="store_true",
+        help="Do not create boundary walls or apply Wall_Out termination.",
+    )
     parser.add_argument("--stochastic", action="store_true")
     parser.add_argument("--random-policy", action="store_true")
     parser.add_argument("--no-plot", action="store_true")
@@ -188,6 +193,7 @@ def run_episode(
         "observation": observation_name,
         "stage": args.stage,
         "obstacles_enabled": bool(env.enable_obstacles),
+        "walls_enabled": bool(env.enable_walls),
         "followers_enabled": bool(env.enable_followers),
         "seed": seed,
         "policy": "random" if args.random_policy else "ppo",
@@ -301,6 +307,7 @@ def run_evaluation(
             render_mode=args.render,
             enable_obstacles=config["enable_obstacles"],
             enable_followers=config["enable_followers"],
+            enable_walls=not args.no_walls,
         )
         if multiple_seeds and not args.no_plot and args.output is None:
             print(

@@ -295,6 +295,11 @@ def parse_training_args(description):
     parser.add_argument("--timesteps", type=int, default=None)
     parser.add_argument("--device", default="cuda")
     parser.add_argument(
+        "--no-walls",
+        action="store_true",
+        help="Do not create boundary walls or apply Wall_Out termination.",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=None,
@@ -330,7 +335,7 @@ def parse_training_args(description):
     return parser.parse_args()
 
 
-def make_env_factory(env_class, rank, config, seed):
+def make_env_factory(env_class, rank, config, seed, enable_walls=True):
     def _init():
         env_seed = seed + rank
         np.random.seed(env_seed)
@@ -338,6 +343,7 @@ def make_env_factory(env_class, rank, config, seed):
             render_mode=False,
             enable_obstacles=config["enable_obstacles"],
             enable_followers=config["enable_followers"],
+            enable_walls=enable_walls,
         )
         env.reset(seed=env_seed)
         return Monitor(env)
@@ -345,9 +351,9 @@ def make_env_factory(env_class, rank, config, seed):
     return _init
 
 
-def create_vectorized_env(env_class, num_envs, config, seed):
+def create_vectorized_env(env_class, num_envs, config, seed, enable_walls=True):
     factories = [
-        make_env_factory(env_class, rank, config, seed)
+        make_env_factory(env_class, rank, config, seed, enable_walls)
         for rank in range(num_envs)
     ]
     if num_envs > 1:
@@ -434,7 +440,13 @@ def run_training(
         total_timesteps = 128
     n_steps, batch_size = rollout_parameters(args.num_envs, args.smoke)
 
-    env = create_vectorized_env(env_class, args.num_envs, config, args.seed)
+    env = create_vectorized_env(
+        env_class,
+        args.num_envs,
+        config,
+        args.seed,
+        enable_walls=not args.no_walls,
+    )
     try:
         shape = env.observation_space["kinematics"].shape
         if shape != (expected_kinematics_dim,):
@@ -444,6 +456,7 @@ def run_training(
 
         print(
             f"Stage {args.stage}: obstacles={config['enable_obstacles']}, "
+            f"walls={not args.no_walls}, "
             f"followers={config['enable_followers']}, resume={resume_from}, "
             f"continue={continue_same_stage}, env_seeds="
             f"{args.seed}..{args.seed + args.num_envs - 1}"

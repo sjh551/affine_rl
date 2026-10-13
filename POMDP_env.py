@@ -1632,6 +1632,8 @@ class FormationPyBulletEnv(gym.Env):
     def _create_walls(self):
         """创建四周的围墙"""
         self.wall_ids = []
+        if not self.enable_walls:
+            return
         wall_thickness = 0.5
         wall_height = 1.0
         wall_length = self.wall_length   # 围墙长
