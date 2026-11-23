@@ -13,6 +13,7 @@ from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
+from controllers.distributed import FOLLOWER_CONTROL_MODES
 from POMDP_env import FormationPyBulletEnv
 from training_common import FormationFeaturesExtractor
 
@@ -25,8 +26,9 @@ class FormationMetrics(BaseCallback):
         return True
 
 
-def make_env(enable_obstacles, enable_walls):
-    return Monitor(FormationPyBulletEnv(enable_obstacles=enable_obstacles, enable_walls=enable_walls))
+def make_env(enable_obstacles, enable_walls, follower_control_mode="centralized"):
+    return Monitor(FormationPyBulletEnv(enable_obstacles=enable_obstacles, enable_walls=enable_walls,
+                                       follower_control_mode=follower_control_mode))
 
 
 def main():
@@ -39,6 +41,8 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--resume-from", type=Path, help="Path to a checkpoint of the three-leader policy.")
     parser.add_argument("--no-walls", action="store_true")
+    parser.add_argument("--follower-control", choices=FOLLOWER_CONTROL_MODES, default="centralized",
+                        help="Follower velocity controller (default: centralized).")
     parser.add_argument("--smoke", action="store_true", help="Run 128 CPU training steps without saving artifacts.")
     args = parser.parse_args()
     if args.num_envs < 1 or (args.timesteps is not None and args.timesteps < 1) or args.seed < 0:
@@ -52,16 +56,17 @@ def main():
     batch_size = 64 if args.smoke else 256
     rollout_size = min(4096, timesteps)
     n_steps = 64 if args.smoke else batch_size * ceil(rollout_size / (num_envs * batch_size))
-    factories = [partial(make_env, obstacles, not args.no_walls)] * num_envs
+    factories = [partial(make_env, obstacles, not args.no_walls, args.follower_control)] * num_envs
     env = DummyVecEnv(factories) if num_envs == 1 else SubprocVecEnv(factories, start_method="spawn")
 
     try:
+        print(f"Follower control: {args.follower_control}")
         callbacks = [FormationMetrics()]
         run_dir = None
         if not args.smoke:
             output_root = Path(__file__).resolve().parent / "outputs"
             output_root.mkdir(exist_ok=True)
-            run_dir = Path(mkdtemp(prefix=f"stage{args.stage}_", dir=output_root))
+            run_dir = Path(mkdtemp(prefix=f"stage{args.stage}_{args.follower_control}_", dir=output_root))
             callbacks.append(CheckpointCallback(max(1_000_000 // num_envs, 1), str(run_dir / "checkpoints")))
 
         kwargs = dict(env=env, device=device, seed=args.seed, verbose=1, n_steps=n_steps,

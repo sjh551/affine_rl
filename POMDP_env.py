@@ -8,6 +8,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 
+from controllers.distributed import DistributedFollowerController, FOLLOWER_CONTROL_MODES
 from formation import AffineFormation
 from ranger import Ranger
 
@@ -17,6 +18,7 @@ class FormationPyBulletEnv(gym.Env):
 
     _physics_dt = 1 / 240
     _substeps = 24
+    _distributed_substeps = 4
     _arena = (20.0, 10.0)
     _leader_speed = 1.0
     _follower_speed = 1.3
@@ -24,7 +26,8 @@ class FormationPyBulletEnv(gym.Env):
     _lidar_bins = 60
     _lidar_history_indices = (0, 4, 9, 14, 19)
 
-    def __init__(self, render_mode=None, enable_obstacles=True, max_steps=1500, enable_walls=True):
+    def __init__(self, render_mode=None, enable_obstacles=True, max_steps=1500, enable_walls=True,
+                 *, follower_control_mode="centralized"):
         super().__init__()
         if isinstance(render_mode, bool):
             render_mode = "human" if render_mode else None
@@ -32,6 +35,8 @@ class FormationPyBulletEnv(gym.Env):
             raise ValueError("render_mode must be None or 'human'.")
         if not isinstance(max_steps, (int, np.integer)) or isinstance(max_steps, bool) or max_steps < 1:
             raise ValueError("max_steps must be a positive integer.")
+        if follower_control_mode not in FOLLOWER_CONTROL_MODES:
+            raise ValueError("follower_control_mode must be 'centralized' or 'distributed'.")
         self.render_mode = render_mode
         self.enable_obstacles = enable_obstacles
         self.enable_walls = enable_walls
@@ -39,6 +44,9 @@ class FormationPyBulletEnv(gym.Env):
         self.formation = AffineFormation()
         self.n_leaders = self.formation.n_leaders
         self.num_robots = self.formation.n_agents
+        self.follower_control_mode = follower_control_mode
+        self._distributed_control = (DistributedFollowerController(self.formation)
+                                     if follower_control_mode == "distributed" else None)
 
         self.action_space = spaces.Box(-1.0, 1.0, (2 * self.n_leaders,), dtype=np.float32)
         self.observation_space = spaces.Dict({
@@ -107,20 +115,9 @@ class FormationPyBulletEnv(gym.Env):
         self._previous_action = action
         self._steps += 1
 
-        positions, _, yaws, _ = self._robot_states()
         leader_velocities = self._limit_speed(action.reshape(self.n_leaders, 2) @ self._frame,
                                               self._leader_speed)
-        follower_velocities = self.formation.follower_velocities(positions, leader_velocities)
-        commands = np.vstack((leader_velocities, self._limit_speed(follower_velocities, self._follower_speed)))
-        for robot, velocity, yaw in zip(self._robots, commands, yaws):
-            robot.command(velocity, yaw, self._heading)
-
-        collision = None
-        for _ in range(self._substeps):
-            p.stepSimulation(physicsClientId=self._client)
-            collision = self._contact_reason()
-            if collision:
-                break
+        collision = self._advance_physics(leader_velocities)
 
         positions, velocities, yaws, yaw_rates = self._robot_states()
         desired = self.formation.desired_positions(positions[:self.n_leaders])
@@ -161,6 +158,33 @@ class FormationPyBulletEnv(gym.Env):
         self._draw_formation(positions)
         obs = self._observation(positions, velocities, yaws, yaw_rates)
         return obs, float(reward), terminated, truncated, info
+
+    def _advance_physics(self, leader_velocities):
+        positions, measured_velocities, yaws, _ = self._robot_states()
+        n_leaders = self.n_leaders
+        for robot, velocity, yaw in zip(self._robots[:n_leaders], leader_velocities, yaws[:n_leaders]):
+            robot.command(velocity, yaw, self._heading)
+
+        controller = self._distributed_control
+        stride = self._distributed_substeps if controller is not None else self._substeps
+        for substep in range(self._substeps):
+            if substep % stride == 0:
+                if controller is not None:
+                    # At substep zero the initial snapshot already precedes the new commands.
+                    if substep:
+                        positions, measured_velocities, yaws, _ = self._robot_states()
+                    commands = controller.follower_velocities(positions, measured_velocities)
+                else:
+                    commands = self.formation.follower_velocities(positions, leader_velocities)
+                commands = self._limit_speed(commands, self._follower_speed)
+                for robot, velocity, yaw in zip(self._robots[n_leaders:], commands, yaws[n_leaders:]):
+                    robot.command(velocity, yaw, self._heading)
+
+            p.stepSimulation(physicsClientId=self._client)
+            collision = self._contact_reason()
+            if collision:
+                return collision
+        return None
 
     @staticmethod
     def _limit_speed(velocities, limit):
@@ -258,8 +282,13 @@ class FormationPyBulletEnv(gym.Env):
                     replaceItemUniqueId=self._debug_lines[k], physicsClientId=self._client,
                 )
 
+    @property
+    def physics_client_id(self):
+        """The Bullet client used by this environment, or None after closing."""
+        return self._client
+
     def close(self):
-        if self._client is not None:
+        if self._client is not None and p.isConnected(physicsClientId=self._client):
             p.disconnect(physicsClientId=self._client)
-            self._client = None
+        self._client = None
         self._needs_reset = True
