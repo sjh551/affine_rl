@@ -1,58 +1,41 @@
-# Leader Follower RL
+# 三领导者仿射编队强化学习
 
-一个基于 PyBullet 的多车编队强化学习项目。
+在 PyBullet 中训练一套 PPO 策略，控制 3 台 Ranger 领导车，引导 7 台车组成的编队到达目标。标称点型、领导者编号 1–3 和 12 条通信边来自 `Zhao2018Affine` 的默认编队。环境按 1.5 倍标称尺寸生成初始编队，并保留原训练任务的四列圆柱障碍和场地围墙。
 
-## 工程目录
+## 训练
 
-```text
-Leader_Follower_RL/
-  assets/                     # 资源文件（URDF / meshes）
-    ranger_mini_v3/
-      urdf/
-      meshes/
-  models/                     # 不同方法/算法实现（后续扩展方法都放这里）
-    DWA/
-    uniform_scale_transform/
-  data/                       # 数据集与采集脚本
-  outputs/                    # 训练产物统一输出
-    models/                   # *.zip 模型
-    checkpoints/              # 阶段训练checkpoint
-    tensorboard/
-      stage1/
-      stage2/
-    autoencoder/              # 预训练编码器权重
-    figures/                  # 分析图像
-  docs/                       # 工程说明文档
-  scripts/                    # 统一运行入口脚本
-  old_files/                  # 历史备份代码
-
-  pybullet_env.py             # 主环境
-  train.py                    # 训练入口
-  test.py                     # 测试入口
-  evaluate_success_rate.py    # 成功率评估
-```
-
-## 关键约定
-
-- `models/` 只放算法方法实现，不放资源文件。
-- 小车 URDF 统一放在 `assets/ranger_mini_v3/`。
-- 所有环境脚本都通过“基于文件位置的绝对路径”加载 URDF，不依赖当前工作目录。
-
-## 运行方式
-
-在项目根目录执行：
+在项目根目录运行。已用 Python 3.10 验证。
 
 ```powershell
-python scripts/run_train.py
-python scripts/run_test.py
-python scripts/run_eval.py
-python scripts/run_collect_data.py
-python scripts/run_train_autoencoder.py
+python -m pip install -r requirements.txt
+python train.py --smoke
+python train.py
 ```
 
-也支持直接运行原脚本（`train.py`、`test.py` 等），路径会自动解析到 `outputs/`。
+`train.py` 默认训练带障碍的完整编队，使用 4 个并行环境。可用 `--num-envs`、`--timesteps`、`--device` 和 `--seed` 修改训练设置。`--stage 1` 使用无障碍场地，仍保留全部 7 台车。通过 `--resume-from <模型路径>` 可以继续训练三领导者模型，或将无障碍阶段的权重用于带障碍训练。旧二领导者权重与新动作及观测空间不兼容。
 
-## 其他
+正式训练为每次运行创建独立的 `outputs/stage*_*/` 目录，存放 TensorBoard 日志、周期性检查点和最终 `ppo_affine.zip`。`--smoke` 在 CPU 上完成 128 步采样和 PPO 更新，不生成训练文件。
 
+## 动作与观测
 
-第二阶段进一步把模型、tensorboard、checkpoint、图像等全部收敛到 `outputs/`，根目录保持干净，便于版本管理和后续扩展新方法。
+平面坐标系以该回合起点至目标的方向为前轴，并在回合内固定。动作和观测中的领导者均按编号 1、2、3 排列。
+
+| 空间 | 形状 | 内容 |
+| --- | --- | --- |
+| 动作 | `(6,)` | 三台领导车的前向与侧向速度分量，每个分量在 `[-1, 1]` 内，单车合速度上限为 1 m/s |
+| `kinematics` | `(29,)` | 目标相对仿射编队质心的二维向量，三台领导车相对该质心的位置、线速度、航向误差的正余弦及角速度，以及上一步的六维动作 |
+| `lidar` | `(3, 5, 60)` | 每台领导车的 5 帧历史扫描。每圈 180 条射线以 3 条为一组取最近距离，量程 7 m，归一化至 `[0, 1]` |
+
+跟随者参考位置由应力矩阵分块得到，令 `F = -solve(Ω_ff, Ω_fl)`，则 `p_f* = F @ p_l`。跟随速度使用仿射机动控制律的集中式解 `v_f = F @ v_l - (p_f - p_f*)`，限速 1.3 m/s 后送入 Ranger 转向与轮速控制。三台领导车的独立平面运动可产生平移、旋转、缩放和剪切。
+
+奖励使用全队实际质心的目标进度和跟踪误差。到达目标时还检查领导三角形和随从跟踪精度。物理碰撞、车间距小于 0.7 m 或越过围墙边界会终止回合，超时返回截断信号。
+
+## 文件
+
+| 路径 | 内容 |
+| --- | --- |
+| `train.py` | PPO 训练、并行环境、日志和模型保存 |
+| `training_common.py` | 三台领导车共享的 LiDAR 特征提取器 |
+| `POMDP_env.py` | Gymnasium 环境、动作与观测、地图和奖励 |
+| `formation.py` | 标称构型、应力矩阵和跟随控制律 |
+| `ranger.py`、`assets/` | Ranger 仿真和 URDF 资源 |

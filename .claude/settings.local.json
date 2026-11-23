@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python train.py --help)",
-      "Bash(python -c \"import train; print\\('Import successful'\\)\")"
-    ]
-  }
-}
