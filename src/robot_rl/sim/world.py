@@ -28,9 +28,15 @@ class BulletWorld:
                                     physicsClientId=client)
         p.loadURDF("plane.urdf", physicsClientId=client)
         self.wall_ids = self._add_walls(course.half_extents) if walls else set()
-        self.obstacle_ids = set()
-        if course.obstacles is not None:
-            self.obstacle_ids = self._add_obstacles(course.obstacles(obstacle_seed), course.scale)
+        self._wall_extents = np.asarray(course.half_extents) if walls else None
+        obstacles = course.obstacles(obstacle_seed) if course.obstacles is not None else ()
+        self.obstacle_ids = self._add_obstacles(obstacles, course.scale)
+        boxes = [obstacle for obstacle in obstacles if isinstance(obstacle, Box)]
+        circles = [obstacle for obstacle in obstacles if not isinstance(obstacle, Box)]
+        self._box_centers = course.scale * np.array([box.center[:2] for box in boxes]).reshape(-1, 2)
+        self._box_half_extents = (course.scale / 2) * np.array([box.size[:2] for box in boxes]).reshape(-1, 2)
+        self._circle_centers = course.scale * np.array([circle.center[:2] for circle in circles]).reshape(-1, 2)
+        self._circle_radii = course.scale * np.array([circle.radius for circle in circles])
         if self.render:
             marker = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=(0, 1, 0, 1),
                                          physicsClientId=client)
@@ -81,6 +87,34 @@ class BulletWorld:
     def ray_fractions(self, origins, ends):
         hits = p.rayTestBatch(origins.tolist(), ends.tolist(), collisionFilterMask=2, physicsClientId=self.client_id)
         return np.asarray([hit[2] for hit in hits], dtype=np.float32)
+
+    def point_clearances(self, points):
+        """Planar distances to obstacle footprints or walls, zero inside an obstacle."""
+        clearance = np.full(len(points), np.inf)
+        if len(self._box_centers):
+            offsets = np.abs(points[:, None] - self._box_centers) - self._box_half_extents
+            distances = np.linalg.norm(np.maximum(offsets, 0.0), axis=2)
+            clearance = np.minimum(clearance, distances.min(axis=1))
+        if len(self._circle_centers):
+            radii = np.linalg.norm(points[:, None] - self._circle_centers, axis=2)
+            clearance = np.minimum(clearance, (radii - self._circle_radii).min(axis=1))
+        if self._wall_extents is not None:
+            clearance = np.minimum(clearance, (self._wall_extents - np.abs(points)).min(axis=1))
+        return np.maximum(clearance, 0.0)
+
+    def obstacle_surface_distances(self, search_distance):
+        """Return the closest surface distance of each nearby robot–obstacle pair."""
+        distances = []
+        for robot in self.robots:
+            lower, upper = robot.bounds()
+            overlaps = p.getOverlappingObjects(lower - search_distance, upper + search_distance,
+                                               physicsClientId=self.client_id) or ()
+            candidates = self.obstacle_ids.intersection(body for body, _ in overlaps)
+            for obstacle in sorted(candidates):
+                contacts = p.getClosestPoints(robot.body, obstacle, search_distance, physicsClientId=self.client_id)
+                if contacts:
+                    distances.append(min(contact[8] for contact in contacts))
+        return np.asarray(distances, dtype=float)
 
     def focus(self, center):
         if self.render:

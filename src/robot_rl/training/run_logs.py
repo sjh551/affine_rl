@@ -12,7 +12,6 @@ from stable_baselines3.common.utils import get_latest_run_id
 from torch.utils.tensorboard import SummaryWriter
 import yaml
 
-from robot_rl.maps.layouts import OBSTACLE_COURSES
 from robot_rl.tasks.formation_navigation.config import DEFAULT_TASK
 from robot_rl.training.config import model_run_dir
 
@@ -24,18 +23,9 @@ _FINAL_MODEL = "ppo_affine.zip"
 def select_run(output_root, prefix, settings, checkpoint, new_run):
     if checkpoint is not None and not new_run:
         candidate = model_run_dir(checkpoint)
-        if (candidate / "tensorboard").is_dir():
-            previous_settings = candidate / _SETTINGS
-            if previous_settings.is_file():
-                same_course = json.loads(previous_settings.read_text(encoding="utf-8")) == settings
-            else:
-                # Runs predating settings files have a stage, and newer names
-                # also carry the map and controller.
-                stage_prefix = f"stage{settings['stage']}_"
-                known_maps = ("open", *OBSTACLE_COURSES)
-                has_map = candidate.name.startswith(tuple(f"{stage_prefix}{name}_" for name in known_maps))
-                same_course = candidate.name.startswith(prefix if has_map else stage_prefix)
-            if same_course:
+        previous_settings = candidate / _SETTINGS
+        if (candidate / "tensorboard").is_dir() and previous_settings.is_file():
+            if json.loads(previous_settings.read_text(encoding="utf-8")) == settings:
                 return candidate, True
 
     output_root.mkdir(parents=True, exist_ok=True)

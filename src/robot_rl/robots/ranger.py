@@ -25,11 +25,12 @@ class Ranger:
 
         joints = {}
         joint_count = p.getNumJoints(self.body, physicsClientId=client)
+        self._links = range(-1, joint_count)
         for index in range(joint_count):
             info = p.getJointInfo(self.body, index, physicsClientId=client)
             joints[info[1].decode()] = info
         # Group 2 is reserved for obstacles and walls. LiDAR ignores group 1.
-        for link in range(-1, joint_count):
+        for link in self._links:
             p.setCollisionFilterGroupMask(self.body, link, 1, 3, physicsClientId=client)
 
         corners = ("fl", "fr", "rl", "rr")
@@ -51,6 +52,11 @@ class Ranger:
         velocity = np.asarray(linear) + np.cross(angular, offset)
         yaw = p.getEulerFromQuaternion(rotation)[2]
         return origin[:2], velocity[:2], yaw, angular[2]
+
+    def bounds(self):
+        """World AABB enclosing the base and all wheel and steering links."""
+        boxes = np.asarray([p.getAABB(self.body, link, physicsClientId=self.client) for link in self._links])
+        return boxes[:, 0].min(axis=0), boxes[:, 1].max(axis=0)
 
     def command(self, velocity, yaw, heading):
         c, s = np.cos(yaw), np.sin(yaw)

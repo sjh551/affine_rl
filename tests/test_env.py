@@ -41,13 +41,16 @@ class EnvironmentTests(unittest.TestCase):
         self.assertFalse(terminated)
         self.assertTrue(truncated)
         self.assertEqual(info["reason"], "Timeout")
+        for key in ("tracking_error", "predicted_clearance", "obstacle_proximity"):
+            self.assertEqual(info["reward_terms"][key], 0.0)
         with self.assertRaises(ResetNeeded):
             env.step(np.zeros(6))
 
     def test_success_terminates(self):
         env = self.make_env(enable_obstacles=False, max_steps=1)
         env.reset(seed=2)
-        with patch.object(env, "_measure_formation", return_value=(1.0, 0.0, 0.0)):
+        goal = env.world.robot_states()[0].mean(axis=0) + [1.0, 0.0]
+        with patch.object(env, "_goal", goal):
             _, _, terminated, truncated, info = env.step(np.zeros(6))
         self.assertTrue(terminated)
         self.assertFalse(truncated)
@@ -67,3 +70,31 @@ class EnvironmentTests(unittest.TestCase):
         self.assertTrue(terminated)
         self.assertFalse(truncated)
         self.assertEqual(info["reason"], "Crash_Obstacle")
+        self.assertEqual(info["reward_terms"]["collision"], -50.0)
+
+    def test_approaching_obstacle_costs_reward_without_ending_episode(self):
+        env = self.make_env()
+        env.reset(seed=0)
+        client = env.physics_client_id
+        p.resetBasePositionAndOrientation(env.world.robots[0].body, (1.6, -1.5, 0.315), (0, 0, 0, 1),
+                                          physicsClientId=client)
+        p.performCollisionDetection(physicsClientId=client)
+        with patch.object(env, "_advance_control", return_value=None):
+            _, reward, terminated, truncated, info = env.step(np.zeros(6))
+        self.assertFalse(terminated or truncated)
+        self.assertLess(info["reward_terms"]["obstacle_proximity"], 0.0)
+        self.assertAlmostEqual(reward, sum(info["reward_terms"].values()))
+
+    def test_prediction_uses_affine_map_and_obstacle_footprints(self):
+        env = self.make_env()
+        env.reset(seed=0)
+        points = np.array([[0.0, -1.5], [1.2, -1.5], [2.0, -1.5], [26.8, 0.0]])
+        np.testing.assert_allclose(env.world.point_clearances(points), [0.0, 0.2, 1.0, 0.2], atol=1e-10)
+        positions, velocities, yaws, yaw_rates = env.world.robot_states()
+        velocities[:3] = [[0.5, 0.1], [0.1, -0.3], [0.7, 0.1]]
+        expected = env.formation.follower_map @ (positions[:3] + 0.5 * velocities[:3])
+        with patch.object(env.world, "point_clearances", return_value=np.zeros(4)) as clearance:
+            terms = env._reward_terms((positions, velocities, yaws, yaw_rates), env._measure_formation(positions),
+                                      success=False, collided=True)
+        np.testing.assert_allclose(clearance.call_args.args[0], expected)
+        self.assertAlmostEqual(terms.predicted_clearance, -28.0)

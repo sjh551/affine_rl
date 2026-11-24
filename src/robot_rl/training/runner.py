@@ -23,6 +23,8 @@ class FormationMetrics(BaseCallback):
         for info in self.locals["infos"]:
             for key in ("goal_distance", "formation_error", "shape_error"):
                 self.logger.record_mean(f"formation/{key}", info[key])
+            for key, value in info["reward_terms"].items():
+                self.logger.record_mean(f"reward/{key}", value)
         return True
 
 

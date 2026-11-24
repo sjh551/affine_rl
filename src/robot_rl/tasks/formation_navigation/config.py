@@ -1,6 +1,6 @@
 """Task defaults and selectable environment settings."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from robot_rl.controllers.formation import FOLLOWER_CONTROL_MODES, NEIGHBOR_VELOCITY_SOURCES
 from robot_rl.maps.layouts import DEFAULT_OBSTACLE_MAP, OBSTACLE_COURSES
@@ -9,12 +9,21 @@ from robot_rl.maps.layouts import DEFAULT_OBSTACLE_MAP, OBSTACLE_COURSES
 @dataclass(frozen=True, slots=True)
 class RewardWeights:
     progress: float = 10.0
-    step_cost: float = 0.05
-    action_change: float = 0.05
-    tracking_error: float = 0.5
-    tracking_tolerance: float = 0.25
-    shape_error: float = 0.2
+    step_cost: float = 0.1
+    velocity_alignment: float = 1.0
+    alignment_goal_distance: float = 2.0
+    alignment_min_speed: float = 0.1
+    tracking_error: float = 5.0
+    tracking_tolerance: float = 0.5
+    shape_error: float = 0.01
     shape_penalty_radius: float = 5.0
+    shape_tolerance: float = 2.0
+    prediction_horizon: float = 0.5
+    predicted_clearance: float = 10.0
+    predicted_warning_distance: float = 0.7
+    obstacle_proximity: float = 0.1
+    surface_warning_distance: float = 0.5
+    surface_distance_floor: float = 0.03
     success_bonus: float = 150.0
     collision_cost: float = 50.0
 
@@ -73,7 +82,8 @@ class EnvironmentConfig:
 
     def run_settings(self):
         settings = dict(stage=self.stage, map=self.map_name, walls=self.walls,
-                        follower_control=self.follower_control, neighbor_velocity=self.neighbor_velocity)
+                        follower_control=self.follower_control, neighbor_velocity=self.neighbor_velocity,
+                        reward_weights=asdict(DEFAULT_TASK.reward))
         if self.max_steps != DEFAULT_TASK.max_steps:
             settings["max_steps"] = self.max_steps
         return settings

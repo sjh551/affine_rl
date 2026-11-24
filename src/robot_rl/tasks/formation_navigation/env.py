@@ -1,5 +1,7 @@
 """Gymnasium interface and episode state for affine formation navigation."""
 
+from dataclasses import asdict, dataclass
+
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -10,7 +12,17 @@ from robot_rl.sim.world import BulletWorld
 
 from .config import DEFAULT_TASK, EnvironmentConfig
 from .observations import ObservationEncoder
-from .rewards import RewardInputs, compute_reward
+from .rewards import RewardInputs, reward_terms
+
+
+@dataclass(frozen=True, slots=True)
+class FormationMeasurements:
+    goal_vector: np.ndarray
+    goal_distance: float
+    follower_errors: np.ndarray
+    tracking_error: float
+    shape_error: float
+    triangle_error: float
 
 
 class FormationPyBulletEnv(gym.Env):
@@ -50,6 +62,7 @@ class FormationPyBulletEnv(gym.Env):
         self._control_stride = (self.task.distributed_substeps if follower_control_mode == "distributed"
                                 else self.task.physics_substeps)
         self._pair_indices = np.triu_indices(self.num_robots, k=1)
+        self._leader_pairs = np.triu_indices(self.n_leaders, k=1)
         self.world = BulletWorld(render_mode, self.task.physics_time_step)
         self.observations = ObservationEncoder(
             self.formation, self.world, self.course.half_extents, self.task.leader_speed,
@@ -91,37 +104,35 @@ class FormationPyBulletEnv(gym.Env):
         if action.shape != self.action_space.shape or not np.all(np.isfinite(action)):
             raise ValueError("Expected six finite action components in leader order.")
         action = np.clip(action, -1, 1)
-        previous_action, self._previous_action = self._previous_action, action
+        self._previous_action = action
         self._steps += 1
 
         velocities = limit_speed(action.reshape(self.n_leaders, 2) @ self._frame, self.task.leader_speed)
         contact = self._advance_control(velocities)
         states = self.world.robot_states()
         positions = states[0]
-        goal_distance, tracking_error, shape_error = self._measure_formation(positions)
+        formation = self._measure_formation(positions)
         collision = contact or self._geometry_violation(positions)
         success = (
             collision is None
-            and goal_distance < self.task.goal_tolerance
-            and shape_error <= self.task.success_shape_error
-            and tracking_error <= self.task.success_tracking_error
+            and formation.goal_distance < self.task.goal_tolerance
+            and formation.shape_error <= self.task.success_shape_error
+            and formation.tracking_error <= self.task.success_tracking_error
         )
-        reward = compute_reward(RewardInputs(
-            self._goal_distance, goal_distance, tracking_error, shape_error,
-            action, previous_action, success, bool(collision),
-        ), self.task.reward)
-        self._goal_distance = goal_distance
+        terms = self._reward_terms(states, formation, success, bool(collision))
+        self._goal_distance = formation.goal_distance
         terminated = bool(success or collision)
         truncated = not terminated and self._steps >= self.max_steps
         self._needs_reset = terminated or truncated
         info = {
             "is_success": bool(success),
-            "goal_distance": goal_distance,
-            "formation_error": tracking_error,
-            "shape_error": shape_error,
+            "goal_distance": formation.goal_distance,
+            "formation_error": formation.tracking_error,
+            "shape_error": formation.shape_error,
+            "reward_terms": asdict(terms),
             "reason": collision or ("Success" if success else "Timeout" if truncated else ""),
         }
-        return self._observe(states), reward, terminated, truncated, info
+        return self._observe(states), terms.total, terminated, truncated, info
 
     def _advance_control(self, leader_velocities):
         initial = self.world.robot_states()
@@ -138,12 +149,42 @@ class FormationPyBulletEnv(gym.Env):
         leaders = positions[:self.n_leaders]
         desired = self.formation.desired_positions(leaders)
         distances = np.linalg.norm(positions[self.n_leaders:] - desired[self.n_leaders:], axis=1)
-        tracking_error = float(np.sqrt(np.mean(np.square(distances))))
-        goal_distance = float(np.linalg.norm(self._goal - positions.mean(axis=0)))
+        goal_vector = self._goal - positions.mean(axis=0)
         offsets = (leaders - desired.mean(axis=0)) @ self._frame.T
-        target = self.formation.nominal[:self.n_leaders]
-        shape_error = float(np.sqrt(np.mean(np.sum(np.square(offsets - target), axis=1))))
-        return goal_distance, tracking_error, shape_error
+        errors = offsets - self.formation.nominal[:self.n_leaders]
+        i, j = self._leader_pairs
+        return FormationMeasurements(
+            goal_vector=goal_vector,
+            goal_distance=float(np.linalg.norm(goal_vector)),
+            follower_errors=distances,
+            tracking_error=float(np.sqrt(np.mean(np.square(distances)))),
+            shape_error=float(np.sqrt(np.mean(np.sum(np.square(errors), axis=1)))),
+            triangle_error=float(np.sqrt(np.mean(np.sum(np.square(errors[i] - errors[j]), axis=1)))),
+        )
+
+    def _reward_terms(self, states, formation, success, collided):
+        positions, velocities, _, _ = states
+        leaders = velocities[:self.n_leaders]
+        weights = self.task.reward
+        empty = np.empty(0)
+        predicted_clearances = surface_distances = empty
+        if self.enable_obstacles:
+            predicted_leaders = positions[:self.n_leaders] + weights.prediction_horizon * leaders
+            predicted_followers = self.formation.follower_map @ predicted_leaders
+            predicted_clearances = self.world.point_clearances(predicted_followers)
+            if not collided:
+                surface_distances = self.world.obstacle_surface_distances(weights.surface_warning_distance)
+        return reward_terms(RewardInputs(
+            previous_goal_distance=self._goal_distance,
+            goal_vector=formation.goal_vector,
+            leader_velocities=leaders,
+            triangle_error=formation.triangle_error,
+            follower_errors=formation.follower_errors if self.enable_obstacles else empty,
+            predicted_clearances=predicted_clearances,
+            obstacle_surface_distances=surface_distances,
+            success=success,
+            collided=collided,
+        ), weights)
 
     def _geometry_violation(self, positions):
         i, j = self._pair_indices
