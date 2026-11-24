@@ -6,7 +6,7 @@ import numpy as np
 import pybullet as p
 
 
-URDF_PATH = Path(__file__).resolve().parent / "assets/ranger_mini_v3/urdf/ranger_mini.urdf"
+URDF_PATH = Path(__file__).resolve().parents[1] / "assets/ranger/urdf/ranger_mini.urdf"
 WHEEL_RADIUS = 0.09
 WHEEL_OFFSETS = ((0.25, 0.19), (0.25, -0.19), (-0.25, 0.19), (-0.25, -0.19))
 

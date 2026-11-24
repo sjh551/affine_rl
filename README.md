@@ -1,79 +1,76 @@
 # 三领导者仿射编队强化学习
 
-在 PyBullet 中训练一套 PPO 策略，控制 3 台 Ranger 领导车，引导 7 台车组成的编队到达目标。标称点型、领导者编号 1–3 和 12 条通信边来自 `Zhao2018Affine` 的默认编队。环境按 1.5 倍标称尺寸生成初始编队，并保留原训练任务的四列圆柱障碍和场地围墙。
+用 PPO 控制三台 Ranger 领导车，带领四台跟随车避障并到达目标。标称构型、领导者 1–3 和 12 条通信边来自 `Zhao2018Affine`。仿真使用 PyBullet，训练使用 Gymnasium 和 Stable-Baselines3。
 
-## 训练
+## 安装
 
-在项目根目录运行。已用 Python 3.10 验证。
-
-```powershell
-python -m pip install -r requirements.txt
-python train.py --smoke
-python train.py
-```
-
-`train.py` 默认训练带障碍的完整编队，使用 4 个并行环境。可用 `--num-envs`、`--timesteps`、`--device` 和 `--seed` 修改训练设置。`--stage 1` 使用无障碍场地，仍保留全部 7 台车。通过 `--resume-from <模型路径>` 可以继续训练三领导者模型，或将无障碍阶段的权重用于带障碍训练。旧二领导者权重与新动作及观测空间不兼容。
-
-正式训练为每次运行创建独立的 `outputs/stage*_*/` 目录，存放 TensorBoard 日志、周期性检查点和最终 `ppo_affine.zip`。`--smoke` 在 CPU 上完成 128 步采样和 PPO 更新，不生成训练文件。
-
-## 可视化测试
-
-从项目根目录运行。脚本直接打开训练使用的 PyBullet 环境，可以观察围墙、障碍物、目标点和 7 台车。绿色车辆是领导车，蓝色是跟随车。
+在 `affine_rl` 仓库根目录运行。项目使用 Python 3.10 或更新版本。
 
 ```powershell
-python -m examples.view_env
-python -m examples.view_env --no-obstacles --demo
+python -m pip install -e .
+python -m unittest discover -s tests -v
 ```
 
-默认进入手动模式。先点击 PyBullet 窗口让它接收键盘输入，再按下列按键操作。移动方向以本回合从起点指向目标的方向为前方。
+开发工具可用 `python -m pip install -e ".[dev]"` 安装。
 
-| 按键 | 操作 |
+## 训练与续训
+
+```powershell
+python scripts/train.py --smoke
+python scripts/train.py --config configs/experiments/formation_ppo.yaml
+python scripts/train.py --map forest --follower-control distributed --neighbor-velocity command
+tensorboard --logdir outputs
+```
+
+默认配置包含 4 个并行环境，使用 CUDA 训练。CPU 环境可传 `--device cpu`。`--smoke` 用单个 CPU 环境做 128 步采样与更新。实验的场景、随机种子、PPO 参数和评估种子放在 YAML 中，命令行可以覆盖地图、控制模式、训练步数等常用选项。
+
+正式训练在 `outputs/stage*_*/` 写入 `experiment.yaml`、训练配置记录 `training_sessions.jsonl`、TensorBoard 日志、检查点和最终模型 `ppo_affine.zip`。日志记录回合奖励、成功率、PPO 指标、目标距离和编队误差。
+
+```powershell
+python scripts/train.py --resume-from "outputs/<运行目录>/ppo_affine.zip" --timesteps 100000
+```
+
+续训、评估和回放会优先读取模型目录的 `experiment.yaml`，也可用 `--config` 显式指定。较早的模型没有配置快照时，请补上对应的场景参数。使用原环境配置续训会接上原 TensorBoard 曲线和累计步数。`--timesteps` 是计划追加的步数，PPO 按完整采样批次更新。也可以从 `checkpoints/` 中恢复。使用 `--new-run` 可另建日志，例如从早于最终模型的检查点开始一条新曲线。
+
+## 评估与回放
+
+```powershell
+python scripts/evaluate.py "outputs/<运行目录>/ppo_affine.zip"
+python scripts/evaluate.py "outputs/<运行目录>/ppo_affine.zip" --seeds 1000 1001 --output outputs/evaluation.json
+python scripts/play.py --model "outputs/<运行目录>/ppo_affine.zip"
+python scripts/play.py --map forest
+python scripts/play.py --no-obstacles --demo
+```
+
+评估默认用 YAML 中的固定测试种子和确定性动作，输出每个种子的回合结果以及成功率、碰撞率、超时率、平均回报、平均步数、跟随误差和终点距离。复现比较时，两组模型使用相同的环境配置和测试种子。
+
+手动模式中，绿色为领导车，蓝色为跟随车。点击 PyBullet 窗口后，用 `W/A/S/D` 移动，按 `1/2/3` 选中领导车，按 `0` 同时控制三台。空格暂停或继续，`R` 重置同一场景，`Q` 退出。碰撞或回合结束后按 `R` 重新开始。`--demo` 展示约 4 秒的剪切和非均匀缩放。
+
+## 地图、动作与观测
+
+| 场景 | 参数和障碍物 |
 | --- | --- |
-| `W` / `S` | 前进 / 后退 |
-| `A` / `D` | 左移 / 右移 |
-| `0` / `1` / `2` / `3` | 同时控制三台领导车 / 单独控制对应编号的领导车 |
-| 空格 / `R` / `Q` | 暂停或继续 / 重置当前场景 / 退出 |
+| 固定地图 | 默认 `--map car-like`，23 个箱体和圆柱，几何等比例缩放为 0.5 倍，场地 54 × 34 m |
+| 随机森林 | `--map forest`，60 个圆柱，场地 48 × 20 m |
+| 无障碍 | `--stage 1`，可视化也支持 `--no-obstacles` |
 
-初始编队中，领导车 1 在最前方，领导车 2 在左侧，领导车 3 在右侧。`--demo` 会执行约 4 秒的剪切和非均匀缩放，随后暂停。按空格可继续手动驾驶，按 `R` 可重播。终端显示到目标的距离、跟随误差和回合结束原因。可用 `--seed` 指定要复现的场景。
+外圈围墙由仿真场景根据地图尺寸生成，可用 `--no-walls` 关闭。初始目标方向定义本回合的前向坐标轴。动作空间为 `(6,)`，每位领导者有前向和侧向速度分量。观测包含 `kinematics (29,)` 和 `lidar (3, 5, 60)`。后者包含三台领导车各 5 帧雷达扫描。
 
-## 动作与观测
+## 控制与奖励
 
-平面坐标系以该回合起点至目标的方向为前轴，并在回合内固定。动作和观测中的领导者均按编号 1、2、3 排列。
+`centralized` 根据应力矩阵的跟随映射每 0.1 秒统一计算一次跟随指令。`distributed` 沿原始通信边每 1/60 秒更新一次。用 `--neighbor-velocity measured` 读取邻居实测速度，或用 `command` 读取上一拍广播的限速后速度指令。后者在重置时置零。PPO 的动作和观测频率为 10 Hz。
 
-| 空间 | 形状 | 内容 |
-| --- | --- | --- |
-| 动作 | `(6,)` | 三台领导车的前向与侧向速度分量，每个分量在 `[-1, 1]` 内，单车合速度上限为 1 m/s |
-| `kinematics` | `(29,)` | 目标相对仿射编队质心的二维向量，三台领导车相对该质心的位置、线速度、航向误差的正余弦及角速度，以及上一步的六维动作 |
-| `lidar` | `(3, 5, 60)` | 每台领导车的 5 帧历史扫描。每圈 180 条射线以 3 条为一组取最近距离，量程 7 m，归一化至 `[0, 1]` |
+奖励包含目标进度、每步成本、动作变化、跟随误差、近目标构型、到达奖励和碰撞惩罚。权重和成功阈值在任务的 `config.py`，各项贡献由 `rewards.py` 的 `reward_terms()` 计算。
 
-奖励使用全队实际质心的目标进度和跟踪误差。到达目标时还检查领导三角形和随从跟踪精度。物理碰撞、车间距小于 0.7 m 或越过围墙边界会终止回合，超时返回截断信号。
+## 工程目录
 
-## 跟随控制
-
-训练和可视化共用 `--follower-control` 参数。默认的 `centralized` 模式每 0.1 秒用预计算映射 `F = -solve(Ω_ff, Ω_fl)` 计算跟随速度 `v_f = F @ v_l - (p_f - F @ p_l)`。
-
-`distributed` 模式沿用原始 12 条通信边。每个跟随者每 1/60 秒从同一拍的物理快照读取自身位置和邻居的位置、实测速度，计算一次
-
-$$
-u_i[k] = \frac{1}{\Omega_{ii}} \sum_{j\in\mathcal{N}_i} w_{ij}
-\bigl(v_j[k] + p_j[k] - p_i[k]\bigr).
-$$
-
-这里的 $v_j[k]$ 是下发本拍指令前的底盘实测速度，领航者也按此方式采样。每次局部更新后推进 4 个 PyBullet 物理子步。分布式控制只使用邻居边权，没有拍内迭代或额外通信时延。环境仍用 $F$ 计算奖励和观测中的仿射参考。两种模式的跟随指令均限速至 1.3 m/s，PPO 动作和观测均以 10 Hz 更新。
-
-```powershell
-python -m examples.view_env --follower-control distributed --no-obstacles --demo
-python train.py --follower-control distributed
-```
-
-## 文件
-
-| 路径 | 内容 |
+| 目录 | 内容 |
 | --- | --- |
-| `train.py` | PPO 训练、并行环境、日志和模型保存 |
-| `training_common.py` | 三台领导车共享的 LiDAR 特征提取器 |
-| `POMDP_env.py` | Gymnasium 环境、动作与观测、地图和奖励 |
-| `formation.py` | 标称构型、应力矩阵和集中式跟随控制律 |
-| `controllers/distributed.py` | 按通信边计算的分布式跟随控制律 |
-| `ranger.py`、`assets/` | Ranger 仿真和 URDF 资源 |
-| `examples/view_env.py` | PyBullet 可视化、键盘驾驶和仿射机动演示 |
+| `scripts/` | 训练、评估、手动驾驶与策略回放入口 |
+| `configs/experiments/` | 可复用的任务、训练和评估配置 |
+| `src/robot_rl/tasks/formation_navigation/` | Gymnasium 接口、任务配置、奖励和观测 |
+| `src/robot_rl/sim/`、`maps/`、`robots/`、`controllers/` | PyBullet 世界、场景布局、Ranger 车体和跟随控制 |
+| `src/robot_rl/training/` | 训练流程、策略网络、评估与日志 |
+| `src/robot_rl/assets/ranger/` | URDF 和网格 |
+| `tests/` | 奖励和环境回归测试 |
+| `outputs/` | 运行时生成的配置快照、日志、模型和评估报告 |

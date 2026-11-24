@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "affine-robot-rl"
+version = "0.1.0"
+description = "PPO for affine formation navigation with Ranger robots"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24,<3",
+  "gymnasium>=0.29,<2",
+  "pybullet>=3.2.7,<4",
+  "torch>=2.3,<3",
+  "stable-baselines3>=2.4,<3",
+  "tensorboard>=2.12,<3",
+  "filelock>=3.12,<4",
+  "PyYAML>=6,<7",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.9,<1"]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["robot_rl*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+robot_rl = [
+  "assets/ranger/urdf/*.urdf",
+  "assets/ranger/meshes/*.obj",
+  "assets/ranger/meshes/*.mtl",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120

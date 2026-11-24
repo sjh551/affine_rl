@@ -1,17 +1,15 @@
-"""Standalone PyBullet obstacles from two public ZJU FAST Lab demos.
+"""Obstacle geometry and course layouts from two public ZJU FAST Lab demos.
 
 Car-like-Robotic-swarm @ eabbf7c, map_generator_easy.py and swarm.launch.
 Swarm-Formation @ 967a4bd, normal_hexagon.launch and random_forest_sensing.cpp.
 
-All positions and lengths are in metres. Only obstacle geometry is defined here.
+All positions and lengths are in metres.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
-from math import floor, isfinite
+from math import floor
 from random import Random
-
-import pybullet as p
 
 
 @dataclass(frozen=True)
@@ -68,34 +66,26 @@ def swarm_formation_forest(seed: int = 1) -> tuple[Cylinder, ...]:
     raise RuntimeError(f"Could not place {count} forest obstacles for seed {seed}.")
 
 
-def spawn_obstacles(
-    client_id: int, obstacles: Sequence[Box | Cylinder], *, scale: float = 1.0,
-) -> set[int]:
-    """Create static collision bodies visible to the affine_rl LiDAR."""
-    if not isfinite(scale) or scale <= 0:
-        raise ValueError("scale must be positive and finite.")
-    bodies = set()
-    shapes = {}
-    color = (0.25, 0.32, 0.29, 1.0)
-    for obstacle in obstacles:
-        center = tuple(scale * value for value in obstacle.center)
-        if isinstance(obstacle, Box):
-            half_extents = tuple(scale * value / 2 for value in obstacle.size)
-            key = (p.GEOM_BOX, *half_extents)
-            collision_args = visual_args = {"halfExtents": half_extents}
-        else:
-            radius, height = scale * obstacle.radius, scale * obstacle.height
-            key = (p.GEOM_CYLINDER, radius, height)
-            collision_args = {"radius": radius, "height": height}
-            visual_args = {"radius": radius, "length": height}
+@dataclass(frozen=True)
+class Course:
+    half_extents: tuple[float, float]
+    start_x: tuple[float, float]
+    goal_x: tuple[float, float]
+    obstacles: Callable[[int], tuple[Box | Cylinder, ...]] | None = None
+    scale: float = 1.0
 
-        if key not in shapes:
-            collision = p.createCollisionShape(key[0], **collision_args, physicsClientId=client_id)
-            visual = p.createVisualShape(key[0], **visual_args, rgbaColor=color, physicsClientId=client_id)
-            shapes[key] = (collision, visual)
-        collision, visual = shapes[key]
-        body = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=collision, baseVisualShapeIndex=visual,
-                                 basePosition=center, physicsClientId=client_id)
-        p.setCollisionFilterGroupMask(body, -1, 2, 3, physicsClientId=client_id)
-        bodies.add(body)
-    return bodies
+    start_y: tuple[float, float] = (-2.0, 2.0)
+    goal_y: tuple[float, float] = (-4.0, 4.0)
+
+    def sample_endpoints(self, rng):
+        start = (rng.uniform(*self.start_x), rng.uniform(*self.start_y))
+        goal = (rng.uniform(*self.goal_x), rng.uniform(*self.goal_y))
+        return start, goal
+
+DEFAULT_OBSTACLE_MAP = "car-like"
+OPEN_COURSE = Course((20.0, 10.0), (-14.0, -13.8), (15.5, 16.0))
+OBSTACLE_COURSES = {
+    "car-like": Course((27.0, 17.0), (-24.1, -24.0), (23.5, 24.0),
+                       obstacles=lambda _: car_like_obstacles(), scale=0.5),
+    "forest": Course((24.0, 10.0), (-21.0, -20.8), (20.4, 20.6), obstacles=swarm_formation_forest),
+}

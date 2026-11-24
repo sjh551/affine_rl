@@ -1,7 +1,10 @@
 """PPO feature extraction for the ordered three-leader observation."""
 
+import sys
+
 import torch as th
 from torch import nn
+from stable_baselines3 import PPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
@@ -30,3 +33,17 @@ class FormationFeaturesExtractor(BaseFeaturesExtractor):
         # The leaders share a CNN; their encoded features keep their node order.
         lidar_features = self.lidar_encoder(lidar.reshape(-1, n_frames, n_bins)).reshape(batch, -1)
         return th.cat((observations["kinematics"], lidar_features), dim=1)
+
+
+def policy_kwargs():
+    return {
+        "features_extractor_class": FormationFeaturesExtractor,
+        "activation_fn": nn.ReLU,
+        "net_arch": {"pi": [128, 128], "vf": [128, 128]},
+    }
+
+
+def load_policy(path, **kwargs):
+    # Existing SB3 archives refer to the former top-level extractor module.
+    sys.modules.setdefault("training_common", sys.modules[__name__])
+    return PPO.load(path, **kwargs)
