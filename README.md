@@ -15,14 +15,86 @@ python -m unittest discover -s tests -v
 
 ## 训练与续训
 
+### 常用训练命令
+
 ```powershell
+# 1. 冒烟测试：单个 CPU 环境，128 步，不保存产物
 python scripts/train.py --smoke
+
+# 2. 默认训练：读取 configs/experiments/formation_ppo.yaml（stage 2，car-like 地图，500 万步）
+python scripts/train.py
 python scripts/train.py --config configs/experiments/formation_ppo.yaml
+
+# 3. 课程训练：先在无障碍场地训练（默认 100 万步），再加载该模型进入障碍地图
+python scripts/train.py --stage 1
+python scripts/train.py --resume-from "outputs/<stage1运行目录>/ppo_affine.zip" --stage 2 --map car-like
+
+# 4. 切换地图与跟随控制方式
+python scripts/train.py --map forest
+python scripts/train.py --follower-control distributed --neighbor-velocity measured
 python scripts/train.py --map forest --follower-control distributed --neighbor-velocity command
+
+# 5. 指定设备、并行环境数、步数、种子和输出目录
+python scripts/train.py --device cpu --num-envs 2 --timesteps 200000
+python scripts/train.py --seed 1 --output-dir outputs/seed1
+
+# 6. 查看训练曲线
 tensorboard --logdir outputs
 ```
 
-默认配置包含 4 个并行环境，使用 CUDA 训练。CPU 环境可传 `--device cpu`。`--smoke` 用单个 CPU 环境做 128 步采样与更新。实验的场景、随机种子、PPO 参数和评估种子放在 YAML 中，命令行可以覆盖地图、控制模式、训练步数等常用选项。
+默认配置包含 4 个并行环境，使用 CUDA 训练。CPU 环境可传 `--device cpu`。`--smoke` 用单个 CPU 环境做 128 步采样与更新。实验的场景、随机种子、PPO 参数和评估种子放在 YAML 中，命令行可以覆盖地图、控制模式、训练步数等常用选项。未传 `--timesteps` 时，stage 1 训练 `open_timesteps` 步，stage 2 训练 `obstacle_timesteps` 步。
+
+### 命令行参数
+
+| 参数 | 取值 | 说明 |
+| --- | --- | --- |
+| `--config` | YAML 路径 | 实验配置，默认 `configs/experiments/formation_ppo.yaml`；续训时默认读模型目录的 `experiment.yaml` |
+| `--stage` | `1` / `2` | 1 为无障碍场地，2 为障碍地图 |
+| `--map` | `car-like` / `forest` | stage 2 使用的障碍地图 |
+| `--no-walls` | 开关 | 关闭外圈围墙 |
+| `--follower-control` | `centralized` / `distributed` | 跟随车控制方式 |
+| `--neighbor-velocity` | `measured` / `command` | distributed 模式下邻居速度来源 |
+| `--num-envs` | 正整数 | 并行环境数（`SubprocVecEnv`） |
+| `--timesteps` | 正整数 | 本次训练（或续训追加）的步数，覆盖 YAML 的阶段默认步数 |
+| `--device` | `cuda` / `cpu` 等 | PyTorch 设备 |
+| `--seed` | 非负整数 | 随机种子 |
+| `--output-dir` | 路径 | 运行产物根目录，默认 `outputs` |
+| `--resume-from` | 模型或检查点路径 | 从已有权重继续训练 |
+| `--new-run` | 开关 | 加载权重但新建运行目录和日志 |
+| `--smoke` | 开关 | 冒烟测试，不保存产物 |
+
+### YAML 配置参数
+
+`configs/experiments/formation_ppo.yaml` 中的参数及默认值：
+
+| 段 | 参数 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `environment` | `stage` | `2` | 训练阶段 |
+| | `map` | `car-like` | 障碍地图 |
+| | `walls` | `true` | 是否生成围墙 |
+| | `follower_control` | `centralized` | 跟随控制方式 |
+| | `neighbor_velocity` | `measured` | 邻居速度来源 |
+| | `max_steps` | `1500` | 每回合最大步数（10 Hz，约 150 s） |
+| `training` | `seed` | `0` | 随机种子 |
+| | `device` | `cuda` | 训练设备 |
+| | `num_envs` | `4` | 并行环境数 |
+| | `timesteps` | `null` | 显式步数；为空时按阶段取下面两项 |
+| | `open_timesteps` | `1000000` | stage 1 默认步数 |
+| | `obstacle_timesteps` | `5000000` | stage 2 默认步数 |
+| | `checkpoint_steps` | `1000000` | 每隔多少步保存检查点 |
+| | `output_dir` | `outputs` | 输出目录 |
+| `ppo` | `rollout_steps` | `4096` | 每次更新的总采样步数（按 `num_envs × batch_size` 向上取整） |
+| | `batch_size` | `256` | 小批量大小 |
+| | `n_epochs` | `5` | 每批数据的优化轮数 |
+| | `clip_range` | `0.1` | PPO 裁剪范围 |
+| | `target_kl` | `0.03` | 提前停止更新的 KL 阈值 |
+| | `learning_rate` | `3e-5` | stage 2 学习率 |
+| | `open_learning_rate` | `1e-4` | stage 1 学习率 |
+| | `ent_coef` | `0.001` | stage 2 熵系数 |
+| | `open_ent_coef` | `0.0005` | stage 1 熵系数 |
+| `evaluation` | `seeds` | `[1000, ..., 1004]` | 评估使用的固定测试种子 |
+
+PPO 参数只能在 YAML 中修改。需要不同超参数时，复制一份 YAML 后用 `--config` 指定。
 
 正式训练在 `outputs/stage*_*/` 写入 `experiment.yaml`、训练配置记录 `training_sessions.jsonl`、TensorBoard 日志、检查点和最终模型 `ppo_affine.zip`。日志记录回合奖励、成功率、PPO 指标、目标距离和编队误差。
 

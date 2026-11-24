@@ -15,7 +15,7 @@ from robot_rl.tasks.formation_navigation.config import EnvironmentConfig
 class TrainingConfig:
     seed: int = 0
     device: str = "cuda"
-    num_envs: int = 4
+    num_envs: int = 8
     timesteps: int | None = None
     open_timesteps: int = 1_000_000
     obstacle_timesteps: int = 5_000_000
