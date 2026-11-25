@@ -78,7 +78,7 @@ class FormationPyBulletEnv(gym.Env):
         start, self._goal = np.asarray(start), np.asarray(goal)
         direction = self._goal - start
         self._heading = np.arctan2(direction[1], direction[0])
-        forward = direction / np.linalg.norm(direction)
+        forward = direction / np.linalg.norm(direction) # c,s
         self._frame = np.array([forward, [-forward[1], forward[0]]])
         initial = self.formation.nominal @ self._frame + start
 
@@ -147,8 +147,8 @@ class FormationPyBulletEnv(gym.Env):
 
     def _measure_formation(self, positions):
         leaders = positions[:self.n_leaders]
-        desired = self.formation.desired_positions(leaders)
-        distances = np.linalg.norm(positions[self.n_leaders:] - desired[self.n_leaders:], axis=1)
+        desired = self.formation.desired_positions(leaders) # get agents' desired pos
+        distances = np.linalg.norm(positions[self.n_leaders:] - desired[self.n_leaders:], axis=1)   # followers' error of pos
         goal_vector = self._goal - positions.mean(axis=0)
         offsets = (leaders - desired.mean(axis=0)) @ self._frame.T
         errors = offsets - self.formation.nominal[:self.n_leaders]
@@ -159,7 +159,7 @@ class FormationPyBulletEnv(gym.Env):
             follower_errors=distances,
             tracking_error=float(np.sqrt(np.mean(np.square(distances)))),
             shape_error=float(np.sqrt(np.mean(np.sum(np.square(errors), axis=1)))),
-            triangle_error=float(np.sqrt(np.mean(np.sum(np.square(errors[i] - errors[j]), axis=1)))),
+            triangle_error=float(np.sqrt(np.mean(np.sum(np.square(errors[i] - errors[j]), axis=1)))),   # rel pos between leaders
         )
 
     def _reward_terms(self, states, formation, success, collided):

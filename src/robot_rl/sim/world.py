@@ -57,7 +57,7 @@ class BulletWorld:
         for i, velocity in enumerate(velocities, start=start):
             self.robots[i].command(velocity, yaws[i], heading)
 
-    def advance(self, substeps, control_stride, update_control):
+    def advance(self, substeps, control_stride, update_control):    # 推进一段 PyBullet 仿真，在指定时刻更新控制，并在检测到碰撞时提前停止
         for substep in range(substeps):
             if substep % control_stride == 0:
                 update_control(substep)
