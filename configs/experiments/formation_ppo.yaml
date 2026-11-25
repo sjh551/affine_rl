@@ -9,7 +9,7 @@ environment:
 training:
   seed: 0
   device: cuda
-  num_envs: 8
+  num_envs: 16
   timesteps: null
   open_timesteps: 1000000
   obstacle_timesteps: 5000000
