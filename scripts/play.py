@@ -46,15 +46,18 @@ def run_viewer(env, seed, demo, policy=None):
     n_leaders = env.n_leaders
     demo_command = shear_action(env.formation.nominal[:n_leaders])
     print(f"Map: {env.obstacle_map or 'open'}")
-    print(f"Follower control: {env.follower_control_mode}")
-    if env.follower_control_mode == "distributed":
-        print(f"Neighbor velocity: {env.neighbor_velocity_source}")
+    if env.enable_followers:
+        print(f"Follower control: {env.follower_control_mode}")
+        if env.follower_control_mode == "distributed":
+            print(f"Neighbor velocity: {env.neighbor_velocity_source}")
+        print("Leaders are green, followers are blue, and the green sphere is the goal.")
+    else:
+        print("Followers disabled. The three green vehicles are the leaders.")
     if policy is None:
         print("W/A/S/D: move | 0: all leaders | 1/2/3: select leader")
     else:
         print("Policy playback is active.")
     print("Space: pause/resume | R: reset with the same seed | Q: quit")
-    print("Leaders are green, followers are blue, and the green sphere is the goal.")
 
     obs, _ = env.reset(seed=seed)
     selection = 0

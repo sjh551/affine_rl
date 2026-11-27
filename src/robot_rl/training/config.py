@@ -1,5 +1,6 @@
 """Load an experiment and apply command-line overrides."""
 
+from argparse import BooleanOptionalAction
 from dataclasses import dataclass, replace
 from math import isfinite
 from pathlib import Path
@@ -119,6 +120,8 @@ def add_environment_arguments(parser):
     parser.add_argument("--stage", type=int, choices=(1, 2), help="1: open course. 2: obstacle course.")
     parser.add_argument("--map", choices=OBSTACLE_COURSES, help="Obstacle course for stage 2.")
     parser.add_argument("--no-walls", dest="walls", action="store_false", default=None)
+    parser.add_argument("--followers", action=BooleanOptionalAction, default=None,
+                        help="Spawn the four followers (enabled by default).")
     parser.add_argument("--follower-control", choices=FOLLOWER_CONTROL_MODES)
     parser.add_argument("--neighbor-velocity", choices=NEIGHBOR_VELOCITY_SOURCES)
 
@@ -133,7 +136,7 @@ def experiment_from_args(parser, args, default_config, model=None):
         experiment = load_experiment(config_path or default_config)
         environment = {
             name: getattr(args, name, None)
-            for name in ("stage", "map", "walls", "follower_control", "neighbor_velocity")
+            for name in ("stage", "map", "walls", "followers", "follower_control", "neighbor_velocity")
         }
         training = {
             name: getattr(args, name, None)

@@ -55,6 +55,8 @@ def _start_run(resources, experiment, resume_from, new_run):
     mode = environment.follower_control
     if mode == "distributed":
         mode += f"_{environment.neighbor_velocity}"
+    if not environment.followers:
+        mode = "leaders_only"
     prefix = f"stage{environment.stage}_{environment.map_name}_{mode}_"
     settings = environment.run_settings()
     run_dir, continuing = select_run(Path(experiment.training.output_dir), prefix, settings, resume_from, new_run)
@@ -77,9 +79,12 @@ def run_training(experiment, *, resume_from=None, new_run=False, smoke=False):
     with ExitStack() as resources:
         resources.callback(env.close)
         print(f"Map: {environment.map_name}")
-        print(f"Follower control: {environment.follower_control}")
-        if environment.follower_control == "distributed":
-            print(f"Neighbor velocity: {environment.neighbor_velocity}")
+        if environment.followers:
+            print(f"Follower control: {environment.follower_control}")
+            if environment.follower_control == "distributed":
+                print(f"Neighbor velocity: {environment.neighbor_velocity}")
+        else:
+            print("Followers disabled (three leaders only).")
         callbacks = [FormationMetrics()]
         run_dir = None
         if not smoke:

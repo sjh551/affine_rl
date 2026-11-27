@@ -32,7 +32,8 @@ class ObservationEncoder:
         positions, velocities, yaws, yaw_rates = states
         count = self.formation.n_leaders
         leaders = positions[:count]
-        center = self.formation.desired_positions(leaders).mean(axis=0)
+        reference = leaders if len(positions) == count else self.formation.desired_positions(leaders)
+        center = reference.mean(axis=0)
         relative_goal = (goal - center) @ frame.T / self.arena
         offsets = (leaders - center) @ frame.T / self.formation.scale
         leader_velocities = velocities[:count] @ frame.T / self.leader_speed

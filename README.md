@@ -42,6 +42,17 @@ python scripts/train.py --seed 1 --output-dir outputs/seed1
 tensorboard --logdir outputs
 ```
 
+### 三领导者对照
+
+训练、评估和回放都接受 `--no-followers`，只生成三台领导车。这个开关可与任意地图或训练阶段组合。无障碍对照可以用下面的命令。
+
+```powershell
+python scripts/train.py --stage 1 --no-followers
+python scripts/play.py --stage 1 --no-followers
+```
+
+也可在实验 YAML 中设置 `environment.followers: false`。保存的实验配置会把该选项传给续训、评估和回放；需要加载权重加入跟随者时显式传 `--followers`。三领导者模式用实际领导者质心计算目标距离和观测，保留领导三角形构型与碰撞判定。两种模式使用同样的动作和观测维度，并分别记录训练曲线。
+
 默认配置包含 4 个并行环境，使用 CUDA 训练。CPU 环境可传 `--device cpu`。`--smoke` 用单个 CPU 环境做 128 步采样与更新。实验的场景、随机种子、PPO 参数和评估种子放在 YAML 中，命令行可以覆盖地图、控制模式、训练步数等常用选项。未传 `--timesteps` 时，stage 1 训练 `open_timesteps` 步，stage 2 训练 `obstacle_timesteps` 步。
 
 ### 命令行参数
@@ -52,6 +63,7 @@ tensorboard --logdir outputs
 | `--stage` | `1` / `2` | 1 为无障碍场地，2 为障碍地图 |
 | `--map` | `car-like` / `forest` | stage 2 使用的障碍地图 |
 | `--no-walls` | 开关 | 关闭外圈围墙 |
+| `--followers` / `--no-followers` | 开关 | 启用 / 关闭四台跟随车 |
 | `--follower-control` | `centralized` / `distributed` | 跟随车控制方式 |
 | `--neighbor-velocity` | `measured` / `command` | distributed 模式下邻居速度来源 |
 | `--num-envs` | 正整数 | 并行环境数（`SubprocVecEnv`） |
@@ -72,6 +84,7 @@ tensorboard --logdir outputs
 | `environment` | `stage` | `2` | 训练阶段 |
 | | `map` | `car-like` | 障碍地图 |
 | | `walls` | `true` | 是否生成围墙 |
+| | `followers` | `true` | 是否生成四台跟随车 |
 | | `follower_control` | `centralized` | 跟随控制方式 |
 | | `neighbor_velocity` | `measured` | 邻居速度来源 |
 | | `max_steps` | `1500` | 每回合最大步数（10 Hz，约 150 s） |

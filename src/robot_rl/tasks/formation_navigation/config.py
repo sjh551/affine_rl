@@ -54,6 +54,7 @@ class EnvironmentConfig:
     follower_control: str = "centralized"
     neighbor_velocity: str = "measured"
     max_steps: int = DEFAULT_TASK.max_steps
+    followers: bool = True
 
     def validate(self):
         if type(self.stage) is not int or self.stage not in (1, 2):
@@ -62,6 +63,8 @@ class EnvironmentConfig:
             raise ValueError(f"Unknown obstacle map {self.map!r}.")
         if type(self.walls) is not bool:
             raise ValueError("environment.walls must be true or false.")
+        if type(self.followers) is not bool:
+            raise ValueError("environment.followers must be true or false.")
         if self.follower_control not in FOLLOWER_CONTROL_MODES:
             raise ValueError(f"Unknown follower control mode {self.follower_control!r}.")
         if self.neighbor_velocity not in NEIGHBOR_VELOCITY_SOURCES:
@@ -78,7 +81,7 @@ class EnvironmentConfig:
     def env_kwargs(self):
         return dict(enable_obstacles=self.stage == 2, obstacle_map=self.map, enable_walls=self.walls,
                     follower_control_mode=self.follower_control, neighbor_velocity_source=self.neighbor_velocity,
-                    max_steps=self.max_steps)
+                    max_steps=self.max_steps, enable_followers=self.followers)
 
     def run_settings(self):
         settings = dict(stage=self.stage, map=self.map_name, walls=self.walls,
@@ -86,4 +89,6 @@ class EnvironmentConfig:
                         reward_weights=asdict(DEFAULT_TASK.reward))
         if self.max_steps != DEFAULT_TASK.max_steps:
             settings["max_steps"] = self.max_steps
+        if not self.followers:
+            settings["followers"] = False
         return settings

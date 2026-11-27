@@ -2,6 +2,7 @@ environment:
   stage: 2
   map: car-like
   walls: true
+  followers: true
   follower_control: centralized
   neighbor_velocity: measured
   max_steps: 1500

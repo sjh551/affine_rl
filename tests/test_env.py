@@ -32,6 +32,26 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(info["reason"], "")
         np.testing.assert_array_equal(obs["kinematics"][-6:], action)
 
+    def test_leaders_only_keeps_initial_leader_positions_and_uses_their_centroid(self):
+        env = self.make_env(enable_obstacles=False, enable_followers=False)
+        full_team = self.make_env(enable_obstacles=False)
+        obs, _ = env.reset(seed=13)
+        full_team.reset(seed=13)
+        leaders = env.world.robot_states()[0]
+        self.assertEqual(len(env.world.robot_ids), 3)
+        np.testing.assert_allclose(leaders, full_team.world.robot_states()[0][:3], atol=2e-5)
+        center = leaders.mean(axis=0)
+        expected_goal = (env._goal - center) @ env._frame.T / env.course.half_extents
+        np.testing.assert_allclose(obs["kinematics"][:2], expected_goal, atol=1e-6)
+        self.assertEqual(env.action_space, full_team.action_space)
+        self.assertEqual(env.observation_space, full_team.observation_space)
+
+        obs, _, terminated, truncated, info = env.step(np.tile([0.4, 0.0], 3))
+        self.assertTrue(env.observation_space.contains(obs))
+        self.assertFalse(terminated or truncated)
+        self.assertEqual(info["formation_error"], 0.0)
+        self.assertLess(info["shape_error"], 0.01)
+
     def test_requires_reset_and_truncates_at_horizon(self):
         env = self.make_env(enable_obstacles=False, max_steps=1)
         with self.assertRaises(ResetNeeded):
@@ -73,16 +93,21 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(info["reward_terms"]["collision"], -50.0)
 
     def test_approaching_obstacle_costs_reward_without_ending_episode(self):
-        env = self.make_env()
+        env = self.make_env(enable_followers=False)
         env.reset(seed=0)
         client = env.physics_client_id
         p.resetBasePositionAndOrientation(env.world.robots[0].body, (1.6, -1.5, 0.315), (0, 0, 0, 1),
                                           physicsClientId=client)
         p.performCollisionDetection(physicsClientId=client)
-        with patch.object(env, "_advance_control", return_value=None):
+        with (
+            patch.object(env, "_advance_control", return_value=None),
+            patch.object(env.world, "point_clearances", side_effect=AssertionError("Unexpected follower prediction")),
+        ):
             _, reward, terminated, truncated, info = env.step(np.zeros(6))
         self.assertFalse(terminated or truncated)
         self.assertLess(info["reward_terms"]["obstacle_proximity"], 0.0)
+        self.assertEqual(info["reward_terms"]["predicted_clearance"], 0.0)
+        self.assertEqual(info["reward_terms"]["tracking_error"], 0.0)
         self.assertAlmostEqual(reward, sum(info["reward_terms"].values()))
 
     def test_prediction_uses_affine_map_and_obstacle_footprints(self):

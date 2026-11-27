@@ -59,7 +59,7 @@ class BulletWorld:
 
     def advance(self, substeps, control_stride, update_control):    # 推进一段 PyBullet 仿真，在指定时刻更新控制，并在检测到碰撞时提前停止
         for substep in range(substeps):
-            if substep % control_stride == 0:
+            if update_control is not None and substep % control_stride == 0:
                 update_control(substep)
             p.stepSimulation(physicsClientId=self.client_id)
             collision = self.contact_reason()
