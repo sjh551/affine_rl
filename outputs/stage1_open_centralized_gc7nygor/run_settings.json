@@ -1,0 +1,27 @@
+{
+  "stage": 1,
+  "map": "open",
+  "walls": true,
+  "follower_control": "centralized",
+  "neighbor_velocity": "measured",
+  "reward_weights": {
+    "progress": 10.0,
+    "step_cost": 0.1,
+    "velocity_alignment": 0.1,
+    "alignment_goal_distance": 2.0,
+    "alignment_min_speed": 0.1,
+    "tracking_error": 5.0,
+    "tracking_tolerance": 0.5,
+    "shape_error": 1.0,
+    "shape_penalty_radius": 8.0,
+    "shape_tolerance": 0.5,
+    "prediction_horizon": 0.5,
+    "predicted_clearance": 10.0,
+    "predicted_warning_distance": 0.7,
+    "obstacle_proximity": 0.1,
+    "surface_warning_distance": 0.5,
+    "surface_distance_floor": 0.03,
+    "success_bonus": 150.0,
+    "collision_cost": 50.0
+  }
+}

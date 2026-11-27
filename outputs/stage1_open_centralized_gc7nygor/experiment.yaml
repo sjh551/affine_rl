@@ -1,0 +1,34 @@
+environment:
+  stage: 1
+  map: car-like
+  walls: true
+  follower_control: centralized
+  neighbor_velocity: measured
+  max_steps: 1500
+training:
+  seed: 0
+  device: cuda
+  num_envs: 16
+  timesteps: null
+  open_timesteps: 1000000
+  obstacle_timesteps: 5000000
+  checkpoint_steps: 1000000
+  output_dir: outputs
+ppo:
+  rollout_steps: 4096
+  batch_size: 256
+  n_epochs: 5
+  gamma: 0.995
+  clip_range: 0.1
+  target_kl: 0.03
+  learning_rate: 3.0e-05
+  open_learning_rate: 0.0001
+  ent_coef: 0.001
+  open_ent_coef: 0.0005
+evaluation:
+  seeds:
+  - 1000
+  - 1001
+  - 1002
+  - 1003
+  - 1004

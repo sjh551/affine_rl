@@ -1,0 +1,945 @@
+{
+  "task": {
+    "stage": 1,
+    "map": "open",
+    "walls": true,
+    "follower_control": "centralized",
+    "neighbor_velocity": "measured",
+    "reward_weights": {
+      "progress": 10.0,
+      "step_cost": 0.1,
+      "velocity_alignment": 0.1,
+      "alignment_goal_distance": 2.0,
+      "alignment_min_speed": 0.1,
+      "tracking_error": 5.0,
+      "tracking_tolerance": 0.5,
+      "shape_error": 1.0,
+      "shape_penalty_radius": 8.0,
+      "shape_tolerance": 0.5,
+      "prediction_horizon": 0.5,
+      "predicted_clearance": 10.0,
+      "predicted_warning_distance": 0.7,
+      "obstacle_proximity": 0.1,
+      "surface_warning_distance": 0.5,
+      "surface_distance_floor": 0.03,
+      "success_bonus": 150.0,
+      "collision_cost": 50.0
+    }
+  },
+  "summary": {
+    "episodes": 100,
+    "success_rate": 1.0,
+    "collision_rate": 0.0,
+    "timeout_rate": 0.0,
+    "mean_return": 384.8074431301193,
+    "mean_steps": 279.07,
+    "mean_tracking_error_m": 0.0069101636610761985,
+    "mean_final_goal_distance_m": 1.9485350390384968,
+    "termination_counts": {
+      "Success": 100
+    }
+  },
+  "episodes": [
+    {
+      "seed": 1000,
+      "steps": 279,
+      "return": 385.7491399478516,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007241706983899656,
+      "final_goal_distance_m": 1.9612161305483902
+    },
+    {
+      "seed": 1001,
+      "steps": 280,
+      "return": 383.801567045354,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006800408809945304,
+      "final_goal_distance_m": 1.90638676059028
+    },
+    {
+      "seed": 1002,
+      "steps": 279,
+      "return": 382.8098339567092,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006348010327372827,
+      "final_goal_distance_m": 1.9539831948326978
+    },
+    {
+      "seed": 1003,
+      "steps": 279,
+      "return": 382.2525066282053,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007486772339131096,
+      "final_goal_distance_m": 1.9673882147618782
+    },
+    {
+      "seed": 1004,
+      "steps": 277,
+      "return": 380.9325267579827,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007078716078673459,
+      "final_goal_distance_m": 1.9624537987753432
+    },
+    {
+      "seed": 1005,
+      "steps": 278,
+      "return": 381.91943335329404,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005946560956230491,
+      "final_goal_distance_m": 1.9083492595061016
+    },
+    {
+      "seed": 1006,
+      "steps": 278,
+      "return": 383.3006479542389,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00817622847333727,
+      "final_goal_distance_m": 1.9880946818131642
+    },
+    {
+      "seed": 1007,
+      "steps": 282,
+      "return": 387.6257693893477,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007913185124984064,
+      "final_goal_distance_m": 1.9440971919938714
+    },
+    {
+      "seed": 1008,
+      "steps": 279,
+      "return": 391.07087228644116,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006673284201998314,
+      "final_goal_distance_m": 1.9878181636146302
+    },
+    {
+      "seed": 1009,
+      "steps": 276,
+      "return": 381.56353374332093,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007085587306559326,
+      "final_goal_distance_m": 1.9971156891025243
+    },
+    {
+      "seed": 1010,
+      "steps": 283,
+      "return": 388.9806657454802,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006662311367460801,
+      "final_goal_distance_m": 1.9483118854760504
+    },
+    {
+      "seed": 1011,
+      "steps": 279,
+      "return": 391.5615500208675,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005875336991001455,
+      "final_goal_distance_m": 1.9752441930906945
+    },
+    {
+      "seed": 1012,
+      "steps": 277,
+      "return": 380.8656322098883,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007481005776465859,
+      "final_goal_distance_m": 1.9882891903910522
+    },
+    {
+      "seed": 1013,
+      "steps": 278,
+      "return": 381.42165929293776,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005551929801686534,
+      "final_goal_distance_m": 1.9949399208613259
+    },
+    {
+      "seed": 1014,
+      "steps": 282,
+      "return": 389.7153940294316,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008738872657154017,
+      "final_goal_distance_m": 1.998423137305235
+    },
+    {
+      "seed": 1015,
+      "steps": 282,
+      "return": 392.95418754556795,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005618824273300643,
+      "final_goal_distance_m": 1.9166771458691987
+    },
+    {
+      "seed": 1016,
+      "steps": 278,
+      "return": 381.3514416833639,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006094356823170603,
+      "final_goal_distance_m": 1.9460782244504204
+    },
+    {
+      "seed": 1017,
+      "steps": 279,
+      "return": 381.90658140465723,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0045724955374556115,
+      "final_goal_distance_m": 1.9929302598510472
+    },
+    {
+      "seed": 1018,
+      "steps": 281,
+      "return": 383.5633996338031,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006438379012619463,
+      "final_goal_distance_m": 1.910284214020133
+    },
+    {
+      "seed": 1019,
+      "steps": 279,
+      "return": 383.1961437020534,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00791852583707501,
+      "final_goal_distance_m": 1.9802894038695733
+    },
+    {
+      "seed": 1020,
+      "steps": 277,
+      "return": 380.5124577770938,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005425057600356898,
+      "final_goal_distance_m": 1.9269800211771289
+    },
+    {
+      "seed": 1021,
+      "steps": 281,
+      "return": 391.5406290778992,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.004440149692937048,
+      "final_goal_distance_m": 1.9598427038135287
+    },
+    {
+      "seed": 1022,
+      "steps": 279,
+      "return": 382.49911400476515,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0076634092637819905,
+      "final_goal_distance_m": 1.970093111232575
+    },
+    {
+      "seed": 1023,
+      "steps": 280,
+      "return": 383.06145236402216,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00709047064307889,
+      "final_goal_distance_m": 1.977525360052152
+    },
+    {
+      "seed": 1024,
+      "steps": 280,
+      "return": 383.31715998858374,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0075929748353066795,
+      "final_goal_distance_m": 1.9516792645772623
+    },
+    {
+      "seed": 1025,
+      "steps": 276,
+      "return": 381.78224309276857,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.009084305567725146,
+      "final_goal_distance_m": 1.977917841040347
+    },
+    {
+      "seed": 1026,
+      "steps": 280,
+      "return": 394.6096748510505,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007713960600609126,
+      "final_goal_distance_m": 1.978423204167878
+    },
+    {
+      "seed": 1027,
+      "steps": 283,
+      "return": 397.73106533395503,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006928794967056751,
+      "final_goal_distance_m": 1.9533822376985865
+    },
+    {
+      "seed": 1028,
+      "steps": 279,
+      "return": 387.7728013129021,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008154091330859942,
+      "final_goal_distance_m": 1.9307521224007214
+    },
+    {
+      "seed": 1029,
+      "steps": 278,
+      "return": 384.3785391977592,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008016174335833338,
+      "final_goal_distance_m": 1.912848923503517
+    },
+    {
+      "seed": 1030,
+      "steps": 281,
+      "return": 384.0512100733488,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005973135908515106,
+      "final_goal_distance_m": 1.9343493913680132
+    },
+    {
+      "seed": 1031,
+      "steps": 278,
+      "return": 381.86544237664555,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008228620325772783,
+      "final_goal_distance_m": 1.971321550188224
+    },
+    {
+      "seed": 1032,
+      "steps": 280,
+      "return": 383.88667230888825,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.009930990572499406,
+      "final_goal_distance_m": 1.9868237279527798
+    },
+    {
+      "seed": 1033,
+      "steps": 279,
+      "return": 382.3575599318358,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005880098206449059,
+      "final_goal_distance_m": 1.9721202819492147
+    },
+    {
+      "seed": 1034,
+      "steps": 278,
+      "return": 382.071624648108,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008752885123282155,
+      "final_goal_distance_m": 1.9706196264849976
+    },
+    {
+      "seed": 1035,
+      "steps": 282,
+      "return": 385.0373558860249,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006738286193367293,
+      "final_goal_distance_m": 1.982040073472734
+    },
+    {
+      "seed": 1036,
+      "steps": 283,
+      "return": 395.6903251928919,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007212480097131262,
+      "final_goal_distance_m": 1.9372124332533531
+    },
+    {
+      "seed": 1037,
+      "steps": 279,
+      "return": 382.41041636173264,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007638265472168914,
+      "final_goal_distance_m": 1.936826211750339
+    },
+    {
+      "seed": 1038,
+      "steps": 278,
+      "return": 381.7463900583339,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0061685758755420554,
+      "final_goal_distance_m": 1.9233355920802133
+    },
+    {
+      "seed": 1039,
+      "steps": 278,
+      "return": 381.75466232997593,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.009096879056646951,
+      "final_goal_distance_m": 1.9498045632000156
+    },
+    {
+      "seed": 1040,
+      "steps": 278,
+      "return": 382.3436626888334,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.01014116309815433,
+      "final_goal_distance_m": 1.9549043511059698
+    },
+    {
+      "seed": 1041,
+      "steps": 279,
+      "return": 382.37924348042384,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006013394258334646,
+      "final_goal_distance_m": 1.9420762495810948
+    },
+    {
+      "seed": 1042,
+      "steps": 279,
+      "return": 382.8044426837697,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006832117027295804,
+      "final_goal_distance_m": 1.960024596057826
+    },
+    {
+      "seed": 1043,
+      "steps": 281,
+      "return": 384.09063959373054,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008536454807145469,
+      "final_goal_distance_m": 1.980599214157689
+    },
+    {
+      "seed": 1044,
+      "steps": 278,
+      "return": 385.33272490243326,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005008659488739226,
+      "final_goal_distance_m": 1.9201420244785925
+    },
+    {
+      "seed": 1045,
+      "steps": 279,
+      "return": 382.5421777253999,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007304226832611079,
+      "final_goal_distance_m": 1.9097295706787156
+    },
+    {
+      "seed": 1046,
+      "steps": 280,
+      "return": 383.4977826531435,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007904512018264752,
+      "final_goal_distance_m": 1.9181086710952435
+    },
+    {
+      "seed": 1047,
+      "steps": 277,
+      "return": 380.64304019453914,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007671489939265025,
+      "final_goal_distance_m": 1.9763980310469487
+    },
+    {
+      "seed": 1048,
+      "steps": 280,
+      "return": 387.78762107943453,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006868130931536283,
+      "final_goal_distance_m": 1.9258030152293157
+    },
+    {
+      "seed": 1049,
+      "steps": 280,
+      "return": 383.3436472635404,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008274542791931523,
+      "final_goal_distance_m": 1.938402157352779
+    },
+    {
+      "seed": 1050,
+      "steps": 282,
+      "return": 394.3096187420958,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00685509384829022,
+      "final_goal_distance_m": 1.9346240139683004
+    },
+    {
+      "seed": 1051,
+      "steps": 276,
+      "return": 385.24748275288744,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.004386846080535375,
+      "final_goal_distance_m": 1.9775600924230172
+    },
+    {
+      "seed": 1052,
+      "steps": 280,
+      "return": 383.29105742222254,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007182524246227413,
+      "final_goal_distance_m": 1.9494421334730279
+    },
+    {
+      "seed": 1053,
+      "steps": 280,
+      "return": 391.06154066998795,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007403652778447561,
+      "final_goal_distance_m": 1.9163886140081217
+    },
+    {
+      "seed": 1054,
+      "steps": 279,
+      "return": 382.23040832706465,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006953499498635866,
+      "final_goal_distance_m": 1.9376245127019414
+    },
+    {
+      "seed": 1055,
+      "steps": 278,
+      "return": 381.43401187949354,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006148433352261287,
+      "final_goal_distance_m": 1.9411334226203076
+    },
+    {
+      "seed": 1056,
+      "steps": 277,
+      "return": 381.196447628637,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008472185820337024,
+      "final_goal_distance_m": 1.994371582978553
+    },
+    {
+      "seed": 1057,
+      "steps": 278,
+      "return": 386.7487373743328,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006928988642413336,
+      "final_goal_distance_m": 1.992677671429575
+    },
+    {
+      "seed": 1058,
+      "steps": 280,
+      "return": 383.78434942016196,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007277884168056024,
+      "final_goal_distance_m": 1.9918951493611075
+    },
+    {
+      "seed": 1059,
+      "steps": 278,
+      "return": 381.9332697303065,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005729598221418774,
+      "final_goal_distance_m": 1.9258206582341664
+    },
+    {
+      "seed": 1060,
+      "steps": 279,
+      "return": 382.50025271543973,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007214427377241449,
+      "final_goal_distance_m": 1.965061480814888
+    },
+    {
+      "seed": 1061,
+      "steps": 278,
+      "return": 383.08079547899337,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007638345589980135,
+      "final_goal_distance_m": 1.897117963452097
+    },
+    {
+      "seed": 1062,
+      "steps": 279,
+      "return": 382.25419027698,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006720165817072418,
+      "final_goal_distance_m": 1.9540332026449017
+    },
+    {
+      "seed": 1063,
+      "steps": 278,
+      "return": 386.3020101867449,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.004712215220474629,
+      "final_goal_distance_m": 1.92568931927833
+    },
+    {
+      "seed": 1064,
+      "steps": 279,
+      "return": 392.9021216652123,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007580261134244441,
+      "final_goal_distance_m": 1.9104992983133269
+    },
+    {
+      "seed": 1065,
+      "steps": 280,
+      "return": 383.0550936730034,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007875129976384586,
+      "final_goal_distance_m": 1.9140517606019367
+    },
+    {
+      "seed": 1066,
+      "steps": 276,
+      "return": 380.2566288327281,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005914752516600554,
+      "final_goal_distance_m": 1.9571031057259962
+    },
+    {
+      "seed": 1067,
+      "steps": 275,
+      "return": 379.1615536692633,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.004408984855129957,
+      "final_goal_distance_m": 1.9379759092853728
+    },
+    {
+      "seed": 1068,
+      "steps": 276,
+      "return": 380.06988196134535,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005871786112783817,
+      "final_goal_distance_m": 1.934913613778518
+    },
+    {
+      "seed": 1069,
+      "steps": 278,
+      "return": 382.04062796527705,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006241309237508495,
+      "final_goal_distance_m": 1.9035977731585454
+    },
+    {
+      "seed": 1070,
+      "steps": 277,
+      "return": 381.13926952139155,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006904555095853358,
+      "final_goal_distance_m": 1.9124265494661172
+    },
+    {
+      "seed": 1071,
+      "steps": 278,
+      "return": 388.3142257744952,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0075461575488067105,
+      "final_goal_distance_m": 1.9985967369869553
+    },
+    {
+      "seed": 1072,
+      "steps": 280,
+      "return": 383.1362776539089,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006222939877889652,
+      "final_goal_distance_m": 1.9429091699922914
+    },
+    {
+      "seed": 1073,
+      "steps": 279,
+      "return": 381.8711921951734,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005479254919836481,
+      "final_goal_distance_m": 1.9463194814636642
+    },
+    {
+      "seed": 1074,
+      "steps": 281,
+      "return": 384.2650178996411,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007154722868000507,
+      "final_goal_distance_m": 1.9252194367395925
+    },
+    {
+      "seed": 1075,
+      "steps": 278,
+      "return": 382.53787422844255,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008908706389569873,
+      "final_goal_distance_m": 1.937467924579379
+    },
+    {
+      "seed": 1076,
+      "steps": 280,
+      "return": 382.662149193583,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00545813790380347,
+      "final_goal_distance_m": 1.9840844380693876
+    },
+    {
+      "seed": 1077,
+      "steps": 278,
+      "return": 381.07051499024624,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005287579524265954,
+      "final_goal_distance_m": 1.9169739446104297
+    },
+    {
+      "seed": 1078,
+      "steps": 275,
+      "return": 379.09815447904384,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00553440551179535,
+      "final_goal_distance_m": 1.9819351722434122
+    },
+    {
+      "seed": 1079,
+      "steps": 281,
+      "return": 384.44617325620254,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008077203831915016,
+      "final_goal_distance_m": 1.9403405917363732
+    },
+    {
+      "seed": 1080,
+      "steps": 278,
+      "return": 381.27079864826396,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006792151628361327,
+      "final_goal_distance_m": 1.9405191667968191
+    },
+    {
+      "seed": 1081,
+      "steps": 280,
+      "return": 383.98199813825806,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006023400068643454,
+      "final_goal_distance_m": 1.9292639586118019
+    },
+    {
+      "seed": 1082,
+      "steps": 278,
+      "return": 381.55968689698824,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005474713256490111,
+      "final_goal_distance_m": 1.9516764030013862
+    },
+    {
+      "seed": 1083,
+      "steps": 280,
+      "return": 390.62196755779627,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006014740214032887,
+      "final_goal_distance_m": 1.9222178905060043
+    },
+    {
+      "seed": 1084,
+      "steps": 279,
+      "return": 390.7523232444043,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005812184026357755,
+      "final_goal_distance_m": 1.9494755594709132
+    },
+    {
+      "seed": 1085,
+      "steps": 278,
+      "return": 381.81252234734063,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006058243172771624,
+      "final_goal_distance_m": 1.9499486694931805
+    },
+    {
+      "seed": 1086,
+      "steps": 283,
+      "return": 386.89246485081645,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006825670364449454,
+      "final_goal_distance_m": 1.97278894619697
+    },
+    {
+      "seed": 1087,
+      "steps": 279,
+      "return": 390.45771753197585,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008096662721419456,
+      "final_goal_distance_m": 1.901605434829359
+    },
+    {
+      "seed": 1088,
+      "steps": 280,
+      "return": 384.2617750011002,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.007661680232332366,
+      "final_goal_distance_m": 1.904410607466095
+    },
+    {
+      "seed": 1089,
+      "steps": 282,
+      "return": 388.2840908341151,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0060500269108077495,
+      "final_goal_distance_m": 1.9139787918137197
+    },
+    {
+      "seed": 1090,
+      "steps": 278,
+      "return": 382.37471427003175,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008658722305844326,
+      "final_goal_distance_m": 1.901801538886358
+    },
+    {
+      "seed": 1091,
+      "steps": 280,
+      "return": 392.398440145924,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.008147170276287082,
+      "final_goal_distance_m": 1.9452177560793185
+    },
+    {
+      "seed": 1092,
+      "steps": 282,
+      "return": 386.86331794186503,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00808762390292837,
+      "final_goal_distance_m": 1.9193578932970836
+    },
+    {
+      "seed": 1093,
+      "steps": 279,
+      "return": 382.5618556614909,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0063077009557953945,
+      "final_goal_distance_m": 1.9166356785640166
+    },
+    {
+      "seed": 1094,
+      "steps": 278,
+      "return": 381.79290751109943,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0072682544505336035,
+      "final_goal_distance_m": 1.9531416026865638
+    },
+    {
+      "seed": 1095,
+      "steps": 279,
+      "return": 393.6134994270217,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.003996368029386283,
+      "final_goal_distance_m": 1.973596829177985
+    },
+    {
+      "seed": 1096,
+      "steps": 278,
+      "return": 392.7040896029933,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.006792433379937413,
+      "final_goal_distance_m": 1.9434970569244554
+    },
+    {
+      "seed": 1097,
+      "steps": 279,
+      "return": 391.5254932805449,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.005709881400419007,
+      "final_goal_distance_m": 1.9694297001236736
+    },
+    {
+      "seed": 1098,
+      "steps": 280,
+      "return": 383.45402579930254,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.0075167495775916,
+      "final_goal_distance_m": 1.928579203923296
+    },
+    {
+      "seed": 1099,
+      "steps": 279,
+      "return": 382.77542999166036,
+      "success": true,
+      "reason": "Success",
+      "mean_tracking_error_m": 0.00764544572573008,
+      "final_goal_distance_m": 1.9600497089896947
+    }
+  ],
+  "checkpoint": "/home/sjh/workspace/affine_rl/outputs/stage1_open_centralized_gc7nygor/ppo_affine.zip"
+}
