@@ -88,7 +88,7 @@ class EnvironmentTests(unittest.TestCase):
     def test_prediction_uses_affine_map_and_obstacle_footprints(self):
         env = self.make_env()
         env.reset(seed=0)
-        points = np.array([[0.0, -1.5], [1.2, -1.5], [2.0, -1.5], [26.8, 0.0]])
+        points = np.array([[0.0, -1.5], [1.2, -1.5], [2.0, -1.5], [env.course.half_extents[0] - 0.2, 0.0]])
         np.testing.assert_allclose(env.world.point_clearances(points), [0.0, 0.2, 1.0, 0.2], atol=1e-10)
         positions, velocities, yaws, yaw_rates = env.world.robot_states()
         velocities[:3] = [[0.5, 0.1], [0.1, -0.3], [0.7, 0.1]]

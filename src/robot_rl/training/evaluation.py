@@ -1,6 +1,7 @@
 """Deterministic rollouts and summary statistics for held-out seeds."""
 
 from collections import Counter
+from multiprocessing import get_context
 from statistics import fmean
 
 import torch
@@ -32,18 +33,34 @@ def _run_episode(env, model, seed):
             }
 
 
-def evaluate_policy(checkpoint, environment, seeds, device="cpu"):
-    torch.set_num_threads(min(torch.get_num_threads(), 4))
+def _evaluate_chunk(args):
+    checkpoint, environment, seeds, device, threads = args
+    torch.set_num_threads(threads)
     model = load_policy(checkpoint, device=device)
     env = FormationPyBulletEnv(**environment.env_kwargs())
     try:
-        episodes = [_run_episode(env, model, seed) for seed in seeds]
+        return [_run_episode(env, model, seed) for seed in seeds]
     finally:
         env.close()
+
+
+def evaluate_policy(checkpoint, environment, seeds, device="cpu", num_envs=1):
+    if num_envs < 1:
+        raise ValueError("num_envs must be a positive integer.")
+    seeds = list(seeds)
+    workers = min(num_envs, len(seeds))
+    if workers <= 1:
+        episodes = _evaluate_chunk((checkpoint, environment, seeds, device, min(torch.get_num_threads(), 4)))
+    else:
+        chunks = [seeds[i * len(seeds) // workers:(i + 1) * len(seeds) // workers] for i in range(workers)]
+        with get_context("spawn").Pool(workers) as pool:
+            batches = pool.map(_evaluate_chunk, [(checkpoint, environment, chunk, device, 1) for chunk in chunks])
+        episodes = [episode for batch in batches for episode in batch]
     reasons = Counter(episode["reason"] for episode in episodes)
     collisions = sum(reasons[key] for key in ("Crash_Obstacle", "Crash_Team", "Wall_Out"))
     return {
         "task": environment.run_settings(),
+        "episodes": episodes,
         "summary": {
             "episodes": len(episodes),
             "success_rate": fmean(episode["success"] for episode in episodes),
@@ -55,5 +72,4 @@ def evaluate_policy(checkpoint, environment, seeds, device="cpu"):
             "mean_final_goal_distance_m": fmean(episode["final_goal_distance_m"] for episode in episodes),
             "termination_counts": dict(reasons),
         },
-        "episodes": episodes,
     }

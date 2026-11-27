@@ -83,9 +83,9 @@ class Course:
         return start, goal
 
 DEFAULT_OBSTACLE_MAP = "car-like"
-OPEN_COURSE = Course((20.0, 10.0), (-14.0, -13.8), (15.5, 16.0))
+OPEN_COURSE = Course((22.0, 10.0), (-14.0, -13.8), (15.5, 16.0))
 OBSTACLE_COURSES = {
-    "car-like": Course((27.0, 17.0), (-24.1, -24.0), (23.5, 24.0),
+    "car-like": Course((30.0, 17.0), (-24.1, -24.0), (23.5, 24.0),
                        obstacles=lambda _: car_like_obstacles(), scale=0.5),
-    "forest": Course((24.0, 10.0), (-21.0, -20.8), (20.4, 20.6), obstacles=swarm_formation_forest),
+    "forest": Course((27.0, 10.0), (-21.0, -20.8), (20.4, 20.6), obstacles=swarm_formation_forest),
 }

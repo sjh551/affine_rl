@@ -43,7 +43,7 @@ def _ppo_options(experiment, smoke):
     n_steps = 64 if smoke else batch_size * ceil(rollout_size / (num_envs * batch_size))
     options = dict(
         device="cpu" if smoke else training.device, seed=training.seed, verbose=1,
-        n_steps=n_steps, batch_size=batch_size, n_epochs=ppo.n_epochs, clip_range=ppo.clip_range,
+        n_steps=n_steps, batch_size=batch_size, n_epochs=ppo.n_epochs, gamma=ppo.gamma, clip_range=ppo.clip_range,
         target_kl=ppo.target_kl, learning_rate=ppo.learning_rate if obstacle_course else ppo.open_learning_rate,
         ent_coef=ppo.ent_coef if obstacle_course else ppo.open_ent_coef, tensorboard_log=None,
     )

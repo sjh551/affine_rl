@@ -28,6 +28,7 @@ class PPOConfig:
     rollout_steps: int = 4096
     batch_size: int = 256
     n_epochs: int = 5
+    gamma: float = 0.995
     clip_range: float = 0.1
     target_kl: float = 0.03
     learning_rate: float = 3e-5
@@ -38,7 +39,7 @@ class PPOConfig:
 
 @dataclass(frozen=True, slots=True)
 class EvaluationConfig:
-    seeds: tuple[int, ...] = (1000, 1001, 1002, 1003, 1004)
+    seeds: tuple[int, ...] = tuple(range(1000, 1100))
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +68,8 @@ class ExperimentConfig:
             value = getattr(self.ppo, key)
             if type(value) is not int or value < minimum:
                 raise ValueError(f"ppo.{key} must be an integer >= {minimum}.")
+        if type(self.ppo.gamma) not in (int, float) or not isfinite(self.ppo.gamma) or not (0.0 < self.ppo.gamma <= 1.0):
+            raise ValueError("ppo.gamma must be in (0, 1].")
         for key in ("clip_range", "target_kl", "learning_rate", "open_learning_rate", "ent_coef", "open_ent_coef"):
             value = getattr(self.ppo, key)
             if type(value) not in (int, float) or not isfinite(value):

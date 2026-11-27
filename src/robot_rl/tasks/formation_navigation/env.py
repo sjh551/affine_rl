@@ -157,9 +157,9 @@ class FormationPyBulletEnv(gym.Env):
             goal_vector=goal_vector,
             goal_distance=float(np.linalg.norm(goal_vector)),
             follower_errors=distances,
-            tracking_error=float(np.sqrt(np.mean(np.square(distances)))),
-            shape_error=float(np.sqrt(np.mean(np.sum(np.square(errors), axis=1)))),
-            triangle_error=float(np.sqrt(np.mean(np.sum(np.square(errors[i] - errors[j]), axis=1)))),   # rel pos between leaders
+            tracking_error=float(np.sqrt(np.mean(np.square(distances)))),   # only followers'
+            shape_error=float(np.sqrt(np.mean(np.sum(np.square(errors), axis=1)))), # only leaders'
+            triangle_error=float(np.sqrt(np.mean(np.sum(np.square(errors[i] - errors[j]), axis=1)))),   # rel pos between leaders <=sqrt(3)*shape_error
         )
 
     def _reward_terms(self, states, formation, success, collided):
@@ -178,7 +178,7 @@ class FormationPyBulletEnv(gym.Env):
             previous_goal_distance=self._goal_distance,
             goal_vector=formation.goal_vector,
             leader_velocities=leaders,
-            triangle_error=formation.triangle_error,
+            shape_error=formation.shape_error,
             follower_errors=formation.follower_errors if self.enable_obstacles else empty,
             predicted_clearances=predicted_clearances,
             obstacle_surface_distances=surface_distances,

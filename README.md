@@ -86,13 +86,14 @@ tensorboard --logdir outputs
 | `ppo` | `rollout_steps` | `4096` | 每次更新的总采样步数（按 `num_envs × batch_size` 向上取整） |
 | | `batch_size` | `256` | 小批量大小 |
 | | `n_epochs` | `5` | 每批数据的优化轮数 |
+| | `gamma` | `0.995` | 折扣因子 |
 | | `clip_range` | `0.1` | PPO 裁剪范围 |
 | | `target_kl` | `0.03` | 提前停止更新的 KL 阈值 |
 | | `learning_rate` | `3e-5` | stage 2 学习率 |
 | | `open_learning_rate` | `1e-4` | stage 1 学习率 |
 | | `ent_coef` | `0.001` | stage 2 熵系数 |
 | | `open_ent_coef` | `0.0005` | stage 1 熵系数 |
-| `evaluation` | `seeds` | `[1000, ..., 1004]` | 评估使用的固定测试种子 |
+| `evaluation` | `seeds` | `[1000, ..., 1099]` | 评估使用的固定测试种子（默认 100 组） |
 
 PPO 参数只能在 YAML 中修改。需要不同超参数时，复制一份 YAML 后用 `--config` 指定。
 
@@ -122,8 +123,8 @@ python scripts/play.py --no-obstacles --demo
 
 | 场景 | 参数和障碍物 |
 | --- | --- |
-| 固定地图 | 默认 `--map car-like`，23 个箱体和圆柱，几何等比例缩放为 0.5 倍，场地 54 × 34 m |
-| 随机森林 | `--map forest`，60 个圆柱，场地 48 × 20 m |
+| 固定地图 | 默认 `--map car-like`，23 个箱体和圆柱，几何等比例缩放为 0.5 倍，场地 60 × 34 m |
+| 随机森林 | `--map forest`，60 个圆柱，场地 54 × 20 m |
 | 无障碍 | `--stage 1`，可视化也支持 `--no-obstacles` |
 
 外圈围墙由仿真场景根据地图尺寸生成，可用 `--no-walls` 关闭。初始目标方向定义本回合的前向坐标轴。动作空间为 `(6,)`，每位领导者有前向和侧向速度分量。观测包含 `kinematics (29,)` 和 `lidar (3, 5, 60)`。后者包含三台领导车各 5 帧雷达扫描。

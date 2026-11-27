@@ -10,14 +10,14 @@ from robot_rl.maps.layouts import DEFAULT_OBSTACLE_MAP, OBSTACLE_COURSES
 class RewardWeights:
     progress: float = 10.0
     step_cost: float = 0.1
-    velocity_alignment: float = 1.0
+    velocity_alignment: float = 0.1
     alignment_goal_distance: float = 2.0
     alignment_min_speed: float = 0.1
     tracking_error: float = 5.0
     tracking_tolerance: float = 0.5
-    shape_error: float = 0.01
-    shape_penalty_radius: float = 5.0
-    shape_tolerance: float = 2.0
+    shape_error: float = 1.0    # the weight of adjusting formation shape
+    shape_penalty_radius: float = 8.0
+    shape_tolerance: float = 0.5
     prediction_horizon: float = 0.5
     predicted_clearance: float = 10.0
     predicted_warning_distance: float = 0.7

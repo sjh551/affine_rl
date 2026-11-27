@@ -12,7 +12,7 @@ class RewardInputs:
     previous_goal_distance: float
     goal_vector: np.ndarray
     leader_velocities: np.ndarray
-    triangle_error: float
+    shape_error: float
     follower_errors: np.ndarray
     predicted_clearances: np.ndarray
     obstacle_surface_distances: np.ndarray
@@ -52,13 +52,15 @@ def reward_terms(step: RewardInputs, weights: RewardWeights = DEFAULT_TASK.rewar
     surface_distances = np.clip(step.obstacle_surface_distances,
                                 weights.surface_distance_floor, weights.surface_warning_distance)
     proximity = 1.0 / surface_distances - 1.0 / weights.surface_warning_distance
-    near_goal_deformation = distance < weights.shape_penalty_radius and step.triangle_error > weights.shape_tolerance
+    # Near the goal, penalize only the leader shape error beyond the tolerance so the
+    # penalty grows continuously and starts before the success threshold.
+    shape_excess = max(step.shape_error - weights.shape_tolerance, 0.0)
     return RewardTerms(
         progress=weights.progress * (step.previous_goal_distance - distance),
         step_cost=-weights.step_cost,
         velocity_alignment=-weights.velocity_alignment * alignment,
         tracking_error=-weights.tracking_error * float(np.sum(tracking_excess)),
-        shape_error=-weights.shape_error * step.triangle_error if near_goal_deformation else 0.0,
+        shape_error=-weights.shape_error * shape_excess if distance < weights.shape_penalty_radius else 0.0,
         predicted_clearance=-weights.predicted_clearance * float(np.sum(predicted_shortfall)),
         obstacle_proximity=-weights.obstacle_proximity * float(np.sum(proximity)),
         success=weights.success_bonus if step.success else 0.0,
